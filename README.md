@@ -1,5 +1,15 @@
 # Projet annuel 
 
+Contexte - Vocabulaire 
+
+* CLASSE = Quand nous parlons de classe, nous désignons une catégorie de déchet que le modèle doit reconnaître.
+
+Exemple: 
+- Classe 0 : plastique 🧴
+- Classe 1 : verre 🍾
+- Classe 2 : métal 🥫
+
+
 # First step
 L'objectif est de tester le modèle sur plusieurs cas simples et connus, avant de les appliquer à la problématique réelle. 
 L'objectif est de commencer volontairement avec des problèmes très simples. 
@@ -43,3 +53,12 @@ On observe que le problème XOR n'est pas linéairement séparable. Le perceptro
 Cela insiste sur la nécessité d'utiliser un PMC (Perceptron Multi Couches). Les couches de neurones cachées dans le PMC lui permettent d'apprendre des relations non linéaires. 
 
 3. Perceptron Multi-Couches
+
+L’idée est surtout de montrer que le MLP peut apprendre une séparation non linéaire entre les classes de déchets.
+Le modèle linéaire permet de rechercher une frontière de décision linéaire entre les différentes catégories. 
+Cependant, les caractéristiques visuelles des déchets ne sont pas nécessairement séparables linéairement. 
+Le perceptron multicouche introduit une ou plusieurs couches cachées ainsi que des fonctions d'activation non linéaires, 
+ce qui permet au modèle d'apprendre des relations plus complexes entre les caractéristiques et les classes.
+
+Première étape : Rassembler des photos de déchets 
+Pour entraîner le PMC, il faut un dataset d'images étiquetées : chaque photo doit appartenir à une classe.
