@@ -12,9 +12,7 @@ Exemple:
 
 # First step
 L'objectif est de tester le modèle sur plusieurs cas simples et connus, avant de les appliquer à la problématique réelle. 
-L'objectif est de commencer volontairement avec des problèmes très simples. 
-
-Nous avons créé volontairement deux problèmes simples. 
+L'objectif est de commencer volontairement avec des problèmes très simples. Nous avons créé volontairement deux problèmes simples. 
 
 1. Données linéairement séparables
 
@@ -115,6 +113,15 @@ image_array =
 
 <=> Ce qui est l'équivalent de ça : [1,0,0,0,1,0,0,0,1,1,1,1]
 
+Une fois le vecteur obtenu, on l'ajoute au tableau X. X = les données que le modèle regarde.
+
+                X.append(image_vector)
+
+On ajoute son index, c'est-à-dire son numéro de classe, au tableau y. y = les réponses qu'on veut que le modèle apprenne à prédire.
+
+                y.append(index)
+
+Cette ligne sert à dire que l'image X appartient appartient à la classe numéro class_index (0, 1, 2). On peut donc comparer le résultat obtenu du modèle à la classe réelle (0 - plastic, 1 - verre , 2 - métal) et mesurer l'écart entre la sortie du modèle et la prédiction attendue. 
 
 Troisième étape: 
 
@@ -125,10 +132,10 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42,
     stratify=y
 )
+
 Tu prends tes images et tu les sépares :
 80 % → entraînement
 20 % → test
-
 
 Création du PMC
 mlp = MLPClassifier(
