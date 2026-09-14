@@ -45,7 +45,7 @@ On observe que les deux groupes de données sont séparés. Il est facilement po
 
 
 # Etape 2 : Test sur des données non linéairement séparables
-Les données non linéairement séparables sont des données qu'on ne peut pas séparer correctement avec une simple droite (2D), ou un plan/hyperplan (dimension supérieure). Un modèle très simple comme un perceptron cherche essentiellement à faire une séparation linéaire. Si les données sont non linéairement séparables, il peut être incapable de trouver une frontière qui sépare correctement les deux classes.
+Les données non linéairement séparables sont des données qu'on ne peut pas séparer correctement avec une simple droite (2D), ou un plan/hyperplan (dimension supérieure). Un modèle très simple comme un Perceptron classique cherche essentiellement à faire une séparation linéaire. Si les données sont non linéairement séparables, il peut être incapable de trouver une frontière qui sépare correctement les deux classes.
 
 
 Pour cela, on utilise le problème XOR. 
@@ -55,7 +55,7 @@ modele_perceptron = Perceptron(
     random_state=42
 )
 
-* RANDOM STATE 
+- parenthèse sur le RANDOM STATE -
 Ci-dessus, on crée un objet Perceptron et on le stocke dans la variable modele_perceptron. En mettant max_iter à 1000, on lui demande de faire 1000 itérations sur les données d'entraînement pour essayer d'apprendre. Le random_state fixé à 42 est un paramètre utilisé pour contrôler le hasard lors de l'entraînement d'un modèle comme le Perceptron. Avant de commencer à apprendre, le Perceptron doit attribuer des valeurs de départ (des poids) à ses connexions. Sans random_state, les poids sont initialisés de manière totalement aléatoire à chaque lancement. Le modèle peut donc converger vers des solutions légèrement différentes à chaque exécution. Avec random_state, le générateur de nombres aléatoires commence toujours au même "endroit". Les poids de départ seront strictement identiques à chaque fois. Le random state permet aussi de comparer les résultats obtenus: si l'on change un paramètre (comme le taux d'apprentissage), le random_state permet de mesurer que l'amélioration vient de ce changement, et non d'un coup de chance de l'initialisation aléatoire.
 
 Graphiquement, voici les résultats :
@@ -117,7 +117,7 @@ image_array =
   1, 1, 1
 ]
 
-<=> Ce qui est l'équivalent de ça : [1,0,0,0,1,0,0,0,1,1,1,1]
+<=> Ce qui est l'équivalent de ça : [1,0,0,0,1,0,0,0,1,1,1,1]. En réalité, les "neurones" de la couche d'entrée sont juste les pixels de l'image. On les appelle "neurones d'entrée" uniquement par abus de langage pour schématiser le réseau.
 
 Une fois le vecteur obtenu, on l'ajoute au tableau X. X = les données que le modèle regarde.
 
@@ -155,15 +155,13 @@ mlp = MLPClassifier(
 * hidden_layer_sizes=(32, 16) signifie donc deux couches cachées, une de 32 neurones et une de 16.
 
 * activation="relu" veut dire que les neurones des couches cachées utilisent la fonction ReLU (Rectified Linear Unit).
-Elle est très simple :
-
-ReLU(x)=max(0,x)
+Elle est très simple: La fonction ReLU (pour Rectified Linear Unit ou unité linéaire rectifiée) est une fonction d'activation non linéaire très populaire en apprentissage profond, définie par la formule (f(x) = max(0, x)).
 
 Donc : 
-si x < 0  →  0
-si x ≥ 0  →  x
+si x < 0  → la fonction renvoie 0
+si x ≥ 0  →  la fonction renvoie x
 
-SI 
+Exemple: SI 
 x = -3  → ReLU(x) = 0
 x = -0.5 → ReLU(x) = 0
 x = 2   → ReLU(x) = 2
