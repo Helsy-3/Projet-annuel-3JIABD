@@ -5,9 +5,9 @@ Contexte - Vocabulaire
 * CLASSE = Quand nous parlons de classe, nous désignons une catégorie de déchet que le modèle doit reconnaître.
 
 Exemple: 
-- Classe 0 : plastique 🧴
-- Classe 1 : verre 🍾
-- Classe 2 : métal 🥫
+- Classe 0 : plastique 
+- Classe 1 : verre 
+- Classe 2 : métal 
 
 
 # Etape 1 : Test sur des données linéairement séparables
@@ -271,3 +271,40 @@ Théoriquement et structurellement, un réseau RBF ne comporte qu'une seule couc
 
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 
+
+# Définitions de notions (annexes)
+
+# Régression linéaire 
+Quand on effectue une régression linéaire en machine learning, on cherche principalement à modéliser la relation linéaire entre une variable cible (ce que l'on veut prédire) et une ou plusieurs variables prédictives (les caractéristiques ou features) afin de faire des prédictions continues.
+
+L'objectif est de trouver la "ligne" mathématique idéale. 
+
+On cherche à déterminer l’équation d'une ligne droite (en 2D), d'un plan (en 3D) ou d'un hyperplan (en dimensions supérieures) qui passe au plus près de l'ensemble des points de données.
+
+Mathématiquement, on cherche à calculer les coefficients optimaux (les poids w et l'ordonnée à l'origine b) de l'équation.
+
+Pour trouver cette ligne idéale, l'algorithme cherche à minimiser une fonction de coût, le plus souvent l'Erreur Quadratique Moyenne (MSE - Mean Squared Error). En clair, on veut que l'écart (le résidu) entre les vraies valeurs de nos données et les valeurs prédites par notre ligne soit le plus petit possible.
+
+Le sens de la relation : Un coefficient positif signifie que si la variable x augmente, la cible y augmente aussi.
+
+# MSE
+Le MSE (Mean Squared Error, ou erreur quadratique moyenne) est une mesure mathématique qui calcule la moyenne des carrés des écarts entre les valeurs prédites par un modèle et les valeurs réelles.
+
+Pénalisation : Élever les erreurs au carré donne un poids beaucoup plus important aux grandes erreurs. Un modèle commettant une grosse erreur est donc très fortement pénalisé.
+
+![hey2](./img-readme/MSE.png)
+
+
+# Tangente hyperbolique (tanh)
+Une tangente hyperbolique est une fonction d'activation non linéaire utilisée dans les réseaux de neurones pour transformer des valeurs d'entrée en une plage comprise entre -1 et 1.
+
+La principale différence entre la fonction tanh (tangente hyperbolique) et la fonction sigmoïde réside dans leur plage de valeurs de sortie et leur centrage sur zéro. 
+
+tanh: ses sorties oscillent entre -1 et 1. 
+
+![hey2](./img-readme/tanh.png)
+
+# Fonction sigmoïde 
+La principale différence entre la fonction tanh (tangente hyperbolique) et la fonction sigmoïde réside dans leur plage de valeurs de sortie et leur centrage sur zéro. 
+
+![hey2](./img-readme/tanh:sigmoïde.png)
