@@ -292,6 +292,9 @@ Le MSE (Mean Squared Error, ou erreur quadratique moyenne) est une mesure mathé
 
 Pénalisation : Élever les erreurs au carré donne un poids beaucoup plus important aux grandes erreurs. Un modèle commettant une grosse erreur est donc très fortement pénalisé.
 
+![hey2](./img-readme/MSE.png)
+
+
 # Tangente hyperbolique (tanh)
 Une tangente hyperbolique est une fonction d'activation non linéaire utilisée dans les réseaux de neurones pour transformer des valeurs d'entrée en une plage comprise entre -1 et 1.
 
@@ -299,5 +302,9 @@ La principale différence entre la fonction tanh (tangente hyperbolique) et la f
 
 tanh: ses sorties oscillent entre -1 et 1. 
 
+![hey2](./img-readme/tanh.png)
+
 # Fonction sigmoïde 
 La principale différence entre la fonction tanh (tangente hyperbolique) et la fonction sigmoïde réside dans leur plage de valeurs de sortie et leur centrage sur zéro. 
+
+![hey2](./img-readme/tanh:sigmoïde.png)
