@@ -5,7 +5,7 @@
 //int X_data[3][2] = {{1, 1}, {2, 3}, {3, 3}};
 //int Y_pred[3] = {1, -1, -1};
 
-int entrainer_perceptron(double learning_rate, double *bias, int rep, int X_data_lignes, int X_data_colonnes, double X_data[X_data_lignes][X_data_colonnes], double Y_pred[])
+int entrainer_perceptron(double learning_rate, double *bias, int epochs, int X_data_lignes, int X_data_colonnes, double X_data[X_data_lignes][X_data_colonnes], double Y_pred[])
 {
     size_t dataset_size = X_data_lignes; // taille du dataset
     size_t poids_nb = X_data_colonnes;
@@ -21,7 +21,7 @@ int entrainer_perceptron(double learning_rate, double *bias, int rep, int X_data
     memset(poids, 0, sizeof(poids)); // on initialise le tableau de poids à 0.
     int total_errors = 0;
 
-    for (int i = 0; i < rep; i++) // on entraine le modèle autant de fois qu'il y a de répétitions
+    for (int i = 0; i < epochs; i++) // on entraine le modèle autant de fois qu'il y a de répétitions
     {
         int total_errors = 0; // on ca comptabiliser le nombre d'erreurs à chaque fois en comparant Y_pred (le résultat attendu)
                               // avec le résultat obtenu avec les poids initialisés à 0.
