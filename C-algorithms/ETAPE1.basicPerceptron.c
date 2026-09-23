@@ -52,30 +52,42 @@ int entrainer_perceptron(double learning_rate, double *bias, int rep, int X_data
     return total_errors;
 }
 
+// Cas de test : entraine le perceptron et ne renvoie que le nombre d'erreurs
+int run_perceptron(void)
+{
+    double poids[2];
+    double bias;
+    return entrainer_perceptron(poids, &bias);
+}
+
 // Entraine un perceptron sur des donnees envoyees depuis Python (vraies photos du dataset)
 // vecteurs : n_exemples * 12 valeurs a la suite (chaque exemple = 12 valeurs, une photo reduite en 2x2 pixels)
 // labels   : n_exemples valeurs, -1 ou 1
-int run_perceptron_dataset(double *vecteurs, int *labels, int n_exemples)
+int run_perceptron_dataset(
+    double *vecteurs,
+    int *labels,
+    int n_exemples,
+    int n_features,
+    double learning_rate,
+    int max_iter,
+    double *weights,
+    double *bias)
 {
-    double weights[12] = {0};
-    double bias = 0.0;
-    double learning_rate = 0.1;
-
-    for (int rep = 0; rep < 1000; rep++)
+    for (int rep = 0; rep < max_iter; rep++)
     {
         int total_errors = 0;
         for (int i = 0; i < n_exemples; i++)
         {
-            double linear_output = bias;
-            for (int j = 0; j < 12; j++)
-                linear_output += vecteurs[i * 12 + j] * weights[j];
+            double linear_output = *bias;
+            for (int j = 0; j < n_features; j++)
+                linear_output += vecteurs[i * n_features + j] * weights[j];
             int pred = (linear_output >= 0) ? 1 : -1;
 
             if (pred != labels[i])
             {
-                for (int j = 0; j < 12; j++)
-                    weights[j] += learning_rate * labels[i] * vecteurs[i * 12 + j];
-                bias += learning_rate * labels[i];
+                for (int j = 0; j < n_features; j++)
+                    weights[j] += learning_rate * labels[i] * vecteurs[i * n_features + j];
+                *bias += learning_rate * labels[i];
                 total_errors++;
             }
         }
@@ -86,18 +98,12 @@ int run_perceptron_dataset(double *vecteurs, int *labels, int n_exemples)
     int erreurs_finales = 0;
     for (int i = 0; i < n_exemples; i++)
     {
-        double sortie = bias;
-        for (int j = 0; j < 12; j++)
-            sortie += vecteurs[i * 12 + j] * weights[j];
+        double sortie = *bias;
+        for (int j = 0; j < n_features; j++)
+            sortie += vecteurs[i * n_features + j] * weights[j];
         int test_pred = (sortie >= 0) ? 1 : -1;
         if (test_pred != labels[i])
             erreurs_finales++;
     }
     return erreurs_finales;
-}
-
-int main(void)
-{
-    printf("Cas de test - erreurs finales : %d/3\n", run_perceptron());
-    return 0;
 }
