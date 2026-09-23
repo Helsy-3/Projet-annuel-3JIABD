@@ -1,0 +1,20 @@
+# Environnement Python
+venv/
+__pycache__/
+*.pyc
+
+# Fichiers compiles en C
+*.so
+*.o
+C-algorithms/etape1
+C-algorithms/etape2
+C-algorithms/etape3
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Documents personnels / references (local uniquement, pas dans le rendu)
+ressources-perso/
+
+# VSCode
+.vscode/

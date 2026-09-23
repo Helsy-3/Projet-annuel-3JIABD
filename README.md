@@ -179,6 +179,65 @@ photo → classe correcte
 
 y_pred = mlp.predict(X_test)
 
+# Implémentation en C et lien avec Python
+On a écrit les algorithmes (perceptron, PMC) dans une bibliothèque en C, et on les relie ensuite à notre notebook Python pour les tester et comparer les résultats.
+
+Concrètement, chaque algorithme (`ETAPE1.basicPerceptron.c`, `ETAPE2.xor.c`, `ETAPE3.multiLayersPerceptron.c`) est écrit sous forme de fonction, sans `main()` central bloquant l'exécution - par exemple `run_perceptron()` ou `run_pmc()`. Une fonction C classique, une fois compilée normalement, donne un programme exécutable qu'on ne peut lancer que depuis un terminal. Pour que Python puisse s'en servir, on compile ces fichiers différemment, en bibliothèque partagée (`.so`), avec la commande :
+
+```bash
+gcc -shared -fPIC ETAPE1.basicPerceptron.c -o ETAPE1.basicPerceptron.so
+```
+
+Depuis Python, le module `ctypes` (intégré à Python, rien à installer) permet ensuite de charger ce `.so` et d'appeler directement les fonctions C comme si c'était des fonctions Python :
+
+```python
+import ctypes
+
+lib = ctypes.CDLL("C-algorithms/ETAPE1.basicPerceptron.so")
+lib.run_perceptron.restype = ctypes.c_int
+erreurs = lib.run_perceptron()
+```
+
+On a validé ce mécanisme sur les trois premières étapes, testées sur les cas de test :
+
+- Étape 1 (perceptron linéaire) : 0 erreur sur les 8 points de test
+- Étape 2 (XOR) : le perceptron simple échoue (2 erreurs sur 4) sur les données brutes, non linéairement séparables ; en ajoutant une caractéristique `x1 * x2` (transformation non linéaire), il converge et n'a plus aucune erreur
+- Étape 3 (PMC) : après rétropropagation du gradient sur les 3 exemples de test, le réseau prédit correctement les 3 classes. Le PMC n'a qu'une seule couche cachée (8 neurones) pour rester simple à expliquer.
+
+## Application sur une portion du vrai dataset
+
+Une fois les algorithmes validés sur les cas de test, on les a aussi appliqués à quelques vraies photos de `dataset-img/`. Pour ça, chaque photo est réduite à 2×2 pixels (donc 12 valeurs, la même taille que les cas de test) puis normalisée entre 0 et 1, comme expliqué plus haut pour la transformation des images en vecteurs.
+
+Première approche testée (à éviter) : calculer ces vecteurs en Python puis les recopier en dur dans le fichier `.c`. Ça ne relie pas vraiment C et Python, ça utilise juste Python comme calculatrice avant de figer les données. On a donc changé les fonctions C pour qu'elles reçoivent un pointeur vers les données, envoyées directement par Python à chaque exécution :
+
+```c
+int run_perceptron_dataset(double *vecteurs, int *labels, int n_exemples)
+```
+
+Côté Python, `ctypes` a besoin de savoir à quoi ressemblent les paramètres (`argtypes`) pour convertir correctement un tableau numpy en pointeur C :
+
+```python
+lib_etape1.run_perceptron_dataset.argtypes = [
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.c_int,
+]
+erreurs = lib_etape1.run_perceptron_dataset(vecteurs_c, labels_c, len(labels))
+```
+
+Résultats sur cette portion du dataset :
+- Modèle linéaire : 0 erreur sur 4 photos (2 plastique, 2 métal)
+- PMC : 6 bonnes prédictions sur 6 photos (2 plastique, 2 verre, 2 métal)
+
+## Début de l'application (tuyauterie)
+
+Le sujet demande à terme une application qui communique avec une API hébergeant les modèles entraînés. Pour ce rendu, on a juste commencé cette architecture, dans `app/` :
+
+- `app/server.py` : un serveur Flask avec une seule route, `/ping`, qui répond `{"message": "le serveur fonctionne"}`
+- `app/client.py` : un script Python qui appelle cette route avec la bibliothèque `requests` et affiche la réponse
+
+Ça ne fait pas encore de prédiction, l'objectif est juste de montrer que la communication client/serveur fonctionne. Les vrais modèles (nos bibliothèques C) seront branchés dessus dans un prochain rendu.
+
 # Etape 4 : SVM avec un noyau RBF
 Un SVM avec un noyau RBF (Radial Basis Function, ou noyau gaussien) est un modèle de machine learning qui sert à classer des données ou à faire des prédictions lorsque les catégories ne peuvent pas être séparées par une simple ligne droite. 
 
