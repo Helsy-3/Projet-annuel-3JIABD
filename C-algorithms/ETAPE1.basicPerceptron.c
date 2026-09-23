@@ -4,11 +4,14 @@
 int X_data[3][2] = {{1, 1}, {2, 3}, {3, 3}};
 int Y_pred[3] = {1, -1, -1};
 
-// Entraine un perceptron simple sur X_data et renvoie le nombre d'erreurs finales
-int run_perceptron(void)
+// Entraine un perceptron simple sur X_data. Remplit poids[0], poids[1] et bias
+// avec ce que le perceptron a appris (utile pour tracer la droite de separation),
+// et renvoie le nombre d'erreurs finales
+int entrainer_perceptron(double *poids, double *bias)
 {
-    double weights[2] = {0.0, 0.0};
-    double bias = 0.0;
+    poids[0] = 0.0;
+    poids[1] = 0.0;
+    *bias = 0.0;
     double learning_rate = 0.1;
 
     for (int rep = 0; rep < 1000; rep++)
@@ -16,14 +19,14 @@ int run_perceptron(void)
         int total_errors = 0;
         for (int i = 0; i < 3; i++)
         {
-            double linear_output = X_data[i][0] * weights[0] + X_data[i][1] * weights[1] + bias;
+            double linear_output = X_data[i][0] * poids[0] + X_data[i][1] * poids[1] + *bias;
             int pred = (linear_output >= 0) ? 1 : -1;
 
             if (pred != Y_pred[i])
             {
-                weights[0] += learning_rate * Y_pred[i] * X_data[i][0];
-                weights[1] += learning_rate * Y_pred[i] * X_data[i][1];
-                bias += learning_rate * Y_pred[i];
+                poids[0] += learning_rate * Y_pred[i] * X_data[i][0];
+                poids[1] += learning_rate * Y_pred[i] * X_data[i][1];
+                *bias += learning_rate * Y_pred[i];
                 total_errors++;
             }
         }
@@ -34,12 +37,20 @@ int run_perceptron(void)
     int erreurs_finales = 0;
     for (int i = 0; i < 3; i++)
     {
-        double sortie = X_data[i][0] * weights[0] + X_data[i][1] * weights[1] + bias;
+        double sortie = X_data[i][0] * poids[0] + X_data[i][1] * poids[1] + *bias;
         int test_pred = (sortie >= 0) ? 1 : -1;
         if (test_pred != Y_pred[i])
             erreurs_finales++;
     }
     return erreurs_finales;
+}
+
+// Cas de test : entraine le perceptron et ne renvoie que le nombre d'erreurs
+int run_perceptron(void)
+{
+    double poids[2];
+    double bias;
+    return entrainer_perceptron(poids, &bias);
 }
 
 // Entraine un perceptron sur des donnees envoyees depuis Python (vraies photos du dataset)
