@@ -154,30 +154,17 @@ mlp = MLPClassifier(
 
 * hidden_layer_sizes=(32, 16) signifie donc deux couches cachées, une de 32 neurones et une de 16.
 
-* activation="relu" veut dire que les neurones des couches cachées utilisent la fonction ReLU (Rectified Linear Unit).
-Elle est très simple: La fonction ReLU (pour Rectified Linear Unit ou unité linéaire rectifiée) est une fonction d'activation non linéaire très populaire en apprentissage profond, définie par la formule (f(x) = max(0, x)).
+Rétropropagation
+La fonction retropropager est le « professeur » du réseau. Son rôle est de corriger les erreurs. Elle analyse la réponse du réseau pour une image donnée et ajuste légèrement tous les poids (W1, W2) et biais (b1, b2) pour qu'il fasse mieux la prochaine fois.
 
-Donc : 
-si x < 0  → la fonction renvoie 0
-si x ≥ 0  →  la fonction renvoie x
+Étape 1 : Tester l'image et voir ce que le réseau répond
+forward(pixel_array, hidden, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
 
-Exemple: SI 
-x = -3  → ReLU(x) = 0
-x = -0.5 → ReLU(x) = 0
-x = 2   → ReLU(x) = 2
-x = 5   → ReLU(x) = 5
+On commence par exécuter forward. Le réseau analyse l'image (pixel_array) et génère sa prédiction dans le tableau output (ex: 70% Plastique, 10% Verre, 20% Métal).
 
-Cette fonction est très importante pour le projet, car elle permet au PMC d'apprendre des relations non linéaires.
-Sans fonction d'activation non linéaire, empiler plusieurs couches reviendrait essentiellement à faire encore une transformation linéaire.
-En gros, ReLU introduit la non-linéarité nécessaire au perceptron multicouche pour apprendre des relations complexes entre les caractéristiques des images.
 
-mlp.fit(X_train, y_train)
 
-C'est ici que le PMC apprend à partir de tes photos.
 
-photo → classe correcte
-
-y_pred = mlp.predict(X_test)
 
 # Implémentation en C et lien avec Python
 On a écrit les algorithmes (perceptron, PMC) dans une bibliothèque en C, et on les relie ensuite à notre notebook Python pour les tester et comparer les résultats.
