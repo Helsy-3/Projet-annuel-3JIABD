@@ -52,7 +52,7 @@ void forward(double *pixel_array, double *hidden_layer, double *output,
     }
 }
 
-// 4. Prédiction (classe avec la plus grande probabilité)
+// Prédiction (classe avec la plus grande probabilité)
 int predire(double *output, int output_length) {
     int meilleur = 0;
     for (int j = 1; j < output_length; j++) {
@@ -63,17 +63,15 @@ int predire(double *output, int output_length) {
     return meilleur;
 }
 
-// 5. Rétropropagation 
+// Rétropropagation 
 void retropropager(double *pixel_array, int classe_attendue, double learning_rate,
                    double *W1, double *b1, double *W2, double *b2,
                    int pixel_array_length, int hidden_layer_length, int output_length) {
     
     double *hidden_layer = malloc(hidden_layer_length * sizeof(double));
     double *output = malloc(output_length * sizeof(double));
-
     forward(pixel_array, hidden_layer, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
 
-    // Erreur couche de sortie (Softmax + Cross Entropy)
     double *cible = calloc(output_length, sizeof(double));
     cible[classe_attendue] = 1.0;
 
@@ -123,7 +121,8 @@ void retropropager(double *pixel_array, int classe_attendue, double learning_rat
 // Entraine le reseau sur des donnees envoyees depuis Python (vraies photos du dataset)
 // vecteurs : n_exemples * IN valeurs a la suite (chaque exemple = IN valeurs)
 // classes  : n_exemples valeurs (0, 1 ou 2)
-// 6. Entraînement complet
+
+// Entraînement complet
 int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
                     int in_dim, int h_dim, int out_dim) {
     
