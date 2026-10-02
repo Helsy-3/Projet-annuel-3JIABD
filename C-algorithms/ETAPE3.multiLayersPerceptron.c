@@ -18,37 +18,38 @@ void init_biais(double *biais, int taille)
     }
 }
 
-// Calcule la sortie du reseau pour une entree x (une seule couche cachee)
-void forward(double *pixel_array, double *hidden_layer, double *output,
-             double *W1, double *bias_1_layer, double *W2, double *bias_2_layer,
-             int pixel_array_length, int hidden_length, int output_length)
+void calculer_sortie_reseau(double *pixel_array, double *hidden_layer, double *output_layer,
+             double *W1, double *bias_layer_1, double *W2, double *bias_layer_2,
+             int pixel_array_length, int hidden_layer_length, int output_length)
 {
 
     // calcul de la couche cachée
-    for (int i = 0; i < hidden_length; i++)
+    for (int i = 0; i < hidden_layer_length; i++)
     {
-        hidden_layer[i] = bias_1_layer[i];
+        hidden_layer[i] = bias_layer_1[i];
         for (int j = 0; j < pixel_array_length; j++)
         {
-            hidden_layer[j] += pixel_array[j] * W1[i * hidden_length + j];
+            hidden_layer[i] += pixel_array[j] * W1[i * hidden_layer_length + j];
         }
     }
 
     // calcul de la couche de sortie
-    for(int j = 0; j < output_length; j++){
-        output[j] = bias_2_layer[j];
-        for( int i = 0; i < hidden_length ; i++){
-            output[j] += hidden_layer[i] * W2[i * hidden_length + j];
+    for(int i = 0; i < output_length; i++)
+    {    
+        output_layer[i] = bias_layer_2[i];
+        for( int j = 0; j < hidden_layer_length ; j++)
+        {
+            output_layer[i] += hidden_layer[j] * W2[j * hidden_layer_length + i];
         }
     }
 
     // conversion en probabilités
     double somme = 0.0;
     for(int j = 0; j < output_length; j++){
-        somme += output[j];
+        somme += output_layer[j];
     }
     for(int j = 0; j < output_length; j++){
-        output[j] = output[j] / somme;
+        output_layer[j] = output_layer[j] / somme;
     }
 }
 
@@ -70,7 +71,7 @@ void retropropager(double *pixel_array, int classe_attendue, double learning_rat
     
     double *hidden_layer = malloc(hidden_layer_length * sizeof(double));
     double *output = malloc(output_length * sizeof(double));
-    forward(pixel_array, hidden_layer, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
+    calculer_sortie_reseau(pixel_array, hidden_layer, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
 
     double *cible = calloc(output_length, sizeof(double));
     cible[classe_attendue] = 1.0;
