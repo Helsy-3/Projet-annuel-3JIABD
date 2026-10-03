@@ -1,69 +1,106 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-// Cas de test officiel du prof ("XOR")
-int Y[4] = {1, 1, -1, -1}; // sorties attendues pour XOR
-double learning_rate = 0.1;
-
-// XOR brut (2 caracteristiques utiles, 3e colonne mise a 0 pour garder la meme taille)
-double X_brut[4][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {1, 1, 0}};
-
-// XOR + caracteristique x1*x2 (3e colonne) : devient lineairement separable
-double X_transforme[4][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {1, 1, 1}};
-
-// Entraine un perceptron sur les donnees X et renvoie le nombre d'erreurs finales
-int train(double X[4][3])
+int entrainer_perceptron(double *vecteurs, int *labels, int n_exemples, int n_features,
+                         double learning_rate, int max_iter, double *weights, double *bias)
 {
-    double w[3] = {0.0, 0.0, 0.0};
-    double bias = 0.0;
+    for (int j = 0; j < n_features; j++)
+        weights[j] = 0.0;
+    *bias = 0.0;
 
-    for (int rep = 0; rep < 1000; rep++)
+    for (int rep = 0; rep < max_iter; rep++)
     {
-        int errors = 0;
-        for (int i = 0; i < 4; i++)
+        int total_errors = 0;
+        for (int i = 0; i < n_exemples; i++)
         {
-            double out = bias;
-            for (int j = 0; j < 3; j++)
-                out += X[i][j] * w[j];
-            int pred = (out >= 0) ? 1 : -1;
+            double linear_output = *bias;
+            for (int j = 0; j < n_features; j++)
+                linear_output += vecteurs[i * n_features + j] * weights[j];
+            int pred = (linear_output >= 0) ? 1 : -1;
 
-            if (pred != Y[i])
+            if (pred != labels[i])
             {
-                for (int j = 0; j < 3; j++)
-                    w[j] += learning_rate * Y[i] * X[i][j];
-                bias += learning_rate * Y[i];
-                errors++;
+                for (int j = 0; j < n_features; j++)
+                    weights[j] += learning_rate * labels[i] * vecteurs[i * n_features + j];
+                *bias += learning_rate * labels[i];
+                total_errors++;
             }
         }
-        if (errors == 0)
+        if (total_errors == 0)
             break;
     }
 
     int erreurs_finales = 0;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < n_exemples; i++)
     {
-        double out = bias;
-        for (int j = 0; j < 3; j++)
-            out += X[i][j] * w[j];
-        int pred = (out >= 0) ? 1 : -1;
-        if (pred != Y[i])
+        double sortie = *bias;
+        for (int j = 0; j < n_features; j++)
+            sortie += vecteurs[i * n_features + j] * weights[j];
+        int pred = (sortie >= 0) ? 1 : -1;
+        if (pred != labels[i])
             erreurs_finales++;
     }
     return erreurs_finales;
 }
 
+int nb_features_transformees(int n_features)
+{
+    return n_features + n_features * (n_features - 1) / 2;
+}
+
+void transformer(double *vecteurs, int n_exemples, int n_features, double *transformes)
+{
+    int n_out = nb_features_transformees(n_features);
+    for (int i = 0; i < n_exemples; i++)
+    {
+        double *x = &vecteurs[i * n_features];
+        double *t = &transformes[i * n_out];
+        int k = 0;
+        for (int a = 0; a < n_features; a++)
+            t[k++] = x[a];
+        for (int a = 0; a < n_features; a++)
+            for (int b = a + 1; b < n_features; b++)
+                t[k++] = x[a] * x[b];
+    }
+}
+
+int entrainer_perceptron_transforme(double *vecteurs, int *labels, int n_exemples, int n_features,
+                                    double learning_rate, int max_iter, double *weights, double *bias)
+{
+    int n_out = nb_features_transformees(n_features);
+    double *transformes = malloc(n_exemples * n_out * sizeof(double));
+    transformer(vecteurs, n_exemples, n_features, transformes);
+    int erreurs = entrainer_perceptron(transformes, labels, n_exemples, n_out,
+                                       learning_rate, max_iter, weights, bias);
+    free(transformes);
+    return erreurs;
+}
+
+double X_xor[4][2] = {{1, 0}, {0, 1}, {0, 0}, {1, 1}};
+int Y_xor[4] = {1, 1, -1, -1};
+
 int run_xor_brut(void)
 {
-    return train(X_brut);
+    double weights[2], bias;
+    return entrainer_perceptron(&X_xor[0][0], Y_xor, 4, 2, 0.1, 1000, weights, &bias);
 }
 
 int run_xor_transforme(void)
 {
-    return train(X_transforme);
+    double weights[3], bias;
+    return entrainer_perceptron_transforme(&X_xor[0][0], Y_xor, 4, 2, 0.1, 1000, weights, &bias);
 }
 
 int main(void)
 {
-    printf("XOR - donnees brutes        : erreurs = %d/4\n", run_xor_brut());
-    printf("XOR - transformation x1*x2  : erreurs = %d/4\n", run_xor_transforme());
+    double weights[3], bias;
+
+    int erreurs = entrainer_perceptron(&X_xor[0][0], Y_xor, 4, 2, 0.1, 1000, weights, &bias);
+    printf("XOR - donnees brutes       : erreurs = %d/4\n", erreurs);
+
+    erreurs = entrainer_perceptron_transforme(&X_xor[0][0], Y_xor, 4, 2, 0.1, 1000, weights, &bias);
+    printf("XOR - transformation x1*x2 : erreurs = %d/4\n", erreurs);
+    printf("  poids appris : w1 = %.2f, w2 = %.2f, w(x1*x2) = %.2f, biais = %.2f\n",
+           weights[0], weights[1], weights[2], bias);
     return 0;
 }
