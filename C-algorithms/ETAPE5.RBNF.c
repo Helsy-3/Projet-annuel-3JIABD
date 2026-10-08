@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include "distance.h"
+#include "utils.h"
 
 // ETAPE 1 : Initialiser les centroïdes.
 
@@ -103,20 +103,62 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
     return sigma;
 }
 
-// ETAPE 5: FONCTION RBF GAUSSIENNE
-double rbf(double distance, double sigma){
-    return exp(-(distance * distance)/ (2.0 * sigma * sigma));
+// on calcule déjà les distances avec l'algorihtme K-means. Dans K-means, l'objectif est de trouver le centre le plus proche.
+// dans rbf, on calcule la distance d'un point avec chacun des centroïdes.
+// Chaque distance doit être passée à la fonction gaussienne et servir d'activation.
+// Ce vecteur est envoyé à la couche de sortie. 
+
+// Une activation RBF, c'est simplement une mesure de « proximité » entre ton point et un centroïde.
+
+// ETAPE 5: Interprétation RBF de la distance à chaque centre (regarder une vidéo Youtube sur ça)
+void compute_rbf_closeness_to_centroid(int K, int dataset_columns, double dot[dataset_columns], double centroids_array[K][dataset_columns], double sigma, double rbf_closeness[K]){
+    // On regarde chaque centroïde
+    for (int i = 0; i < K; i++){
+        double distance_carre = 0;
+        // On calcule la distance entre le point et le centroïde
+        for (int j = 0; j < dataset_columns; j++){
+            double difference = dot[j] - centroids_array[i][j];
+            distance_carre += difference * difference;
+        }
+        // On obtient la distance
+        double distance = sqrt(distance_carre);
+        // On transforme la distance en activation RBF
+        rbf_closeness[i] = rbf(distance, sigma);
+    }
 }
 
 
+// cette fonction apprend quelle importance donner à chaque centre pour obtenir la bonne sortie.
+// La fonction train_weights() va modifier ces poids petit à petit pour que le réseau fasse de meilleures prédictions.
 
-void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size)
-{
+// ETAPE 6 : Entrainer les poids rétro-activement
+void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
+    double rbf_closeness[K];
+    for (int epoch = 0; epoch < epochs; epoch++){
+        double total_error = 0.0;
+        for (int i = 0; i < dataset_rows; i++){
+            compute_rbf_activations(K, dataset_columns, dataset_array[i], centroids_array, sigma, rbf_closeness);
+            double output = compute_output(K, rbf_closeness, weights);
+            double error = targets[i] - output;
+            total_error += error * error;
+            for (int j = 0; j < K; j++){
+                weights[j] += learning_rate * error * rbf_closeness[j];
+            }
+        }
+
+        // Erreur moyenne
+        double mse = total_error / dataset_rows;
+        printf("Epoch %d - MSE = %f\n", epoch, mse);
+    }
+}
+
+
+void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size){
     size_t dataset_size = dataset_rows;
     size_t weight_nb = dataset_columns;
 
-    double weight[weight_nb];
-    memset(weight, 0, sizeof(weight));// on initialise le tableau de poids à 0.
+    double weights[weight_nb];
+    memset(weights, 0, sizeof(weights));// on initialise le tableau de poids à 0.
 
     // COUCHE 1
     

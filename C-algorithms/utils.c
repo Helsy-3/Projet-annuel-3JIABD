@@ -48,3 +48,15 @@ min_distance = distance;
 }
 return closest_centroid;
 }
+
+double rbf(double distance, double sigma){
+    return exp(-(distance * distance)/ (2.0 * sigma * sigma));
+}
+
+double compute_output(int K, double rbf_closeness[K], double weights[K]){
+    double output = 0.0;
+    for (int i = 0; i < K; i++){
+        output += weights[i] * rbf_closeness[i];
+    }
+    return output;
+}
