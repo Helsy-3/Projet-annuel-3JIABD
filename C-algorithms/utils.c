@@ -1,5 +1,5 @@
 #include <math.h>
-#include "distance.h"
+#include "utils.h"
 
 double euclidean_distance(double *dot,double *centroid, int dataset_columns)
 {
