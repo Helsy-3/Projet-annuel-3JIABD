@@ -1,143 +1,94 @@
-/*
-Un Radial Basis Function Network est un type de réseau de neurones artificiels qui utilise
-des fonctions de base radiale comme fonctions d'activation.
-Un RBFN se compose généralement de trois couches :
-
-• Couche d'entrée : Elle reçoit les données brutes et les transmet au réseau sans modification.
-• Couche cachée : Elle transforme les données de manière non linéaire.
-Chaque neurone calcule la distance entre l'entrée et un point central (appelé centre),
-en appliquant une fonction radiale (souvent une fonction gaussienne).
-Le neurone s'active fortement si l'entrée est proche de son centre.
-• Couche de sortie : Elle calcule une combinaison linéaire des activations de la
-couche cachée pour produire la prédiction finale.
-
-DEFINITIONS
-
-A. Transformer des données de manière non linéaire:
-- En informatique et en mathématiques, transformer les données de manière non linéaire
-signifie modifier la structure des données afin que la relation entre l'entrée et la sortie ne forme plus une simple ligne droite
-
--> EN EFFET, la transformation linéaire est insuffisante. Si vos points rouges entourent les points bleus (comme une cible), aucune ligne droite ne pourra les séparer.
-Une transformation linéaire échouera toujours à résoudre ce problème.
-
-CONSEQUENCE: La transformation non linéaire est la solution.
-• Le principe : Elle courbe, tord ou projette les données dans un espace totalement différent (souvent avec plus de dimensions).
-• L'effet visuel : C'est comme si vous preniez la feuille de papier et que vous la déformiez pour créer une colline. Les points bleus se retrouvent au sommet de la colline et les points rouges en bas.
-• Le résultat : Il devient maintenant très facile de séparer les deux groupes (par exemple, en passant un coup de couteau horizontal pour couper le sommet de la colline).
-Comment le RBFN fait cela ?
-Dans un réseau RBFN, la couche cachée utilise une courbe en cloche (gaussienne). Au lieu de regarder la valeur brute de l'entrée, elle calcule : "À quelle distance se trouve cette entrée du centre de mon neurone ?".
-Cette notion de distance et de courbe en cloche brise la rigidité des lignes droites et permet au réseau de comprendre des motifs complexes, circulaires ou entremêlés.
-
-B. Fonction gaussienne
-Une fonction gaussienne est une fonction mathématique qui dessine une courbe en forme de cloche
-inversée, parfaitement symétrique.
-Dans le réseau de neurones RBFN, la fonction gaussienne sert de détecteur de proximité.
-*/
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
+#include "distance.h"
 
-// STEP 1. Initialization: First, you must decide how many clusters you want to find, which is the value K. Then, the algorithm initializes
-// K centroids. A common way to do this is to randomly select K data points from your dataset and designate them as the initial
-// centroids. Other initialization methods exist, but random selection is a straightforward starting point.
+// ETAPE 1 : Initialiser les centroïdes.
+
+// La meilleure méthode pour trouver K (nombre souhaité) centroïds est de les sélectionner de façon aléatoire dans le dataset et de les désigner
+// comme les centroïdes initiaux.
+
 void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns])
 {
-    // K is the number of desired centroids
-    for (int i = 0; i < K; i++)
+        // K est le nombre de centroïdes que l'on souhaite obtenir.
+        for (int i = 0; i < K; i++)
+
     {
-        int centroïd = rand() % dataset_rows; // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
-        for (int j = 0; j < dataset_columns; j++)
+        int random_centroid = rand() % dataset_rows;
+          // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
+            for (int j = 0; j < dataset_columns; j++)
+
         {
-            centroids_array[i][j] = dataset_array[centroïd][j];
+            centroids_array[i][j] = dataset_array[random_centroid][j];
         }
     }
 }
 
-// STEP 2. Assignement step: For each data point in your dataset, calculate its distance to each of the  centroids.
-// Assign the data point to the cluster whose centroid is the nearest (closest). The most common way to measure distance here is the standard Euclidean distance (the straight-line distance you'd measure with a ruler), but the concept is simply "closest centroid".
-// After this step, every data point belongs to one of the  K clusters.
+// ETAPE 2 : Assigner les points du dataset au centroïde le plus proche.
 
-// distance(A,B)= sqrt((xA−xB)2+(yA−yB)2)
+// Pour assigner les points du dataset au centroïde le plus proche, on va calculer la distance de chaque point à chacun des centroïdes.
+// Pour calculer la distance, on utilise la distance euclidienne.
 
-double euclidean_distance(double *dot, double *centroïd, int dataset_columns)
+void assign_clusters(
+    int K,
+    int dataset_rows,
+    int dataset_columns,
+    double dataset_array[dataset_rows][dataset_columns],
+    double centroids_array[K][dataset_columns],
+    int clusters_array[K][dataset_rows],
+    int cluster_sizes[K])
 {
-    int total = 0;
-    for (int j = 0; j < dataset_columns; j++)
+    for (int i = 0; i < K; i++)
+
     {
-        double difference = abs(dot[j] - centroïd[j]);
-        total += difference * difference;
+        cluster_sizes[i] = 0;
     }
 
-    return sqrt(total);
-}
-
-int compute_closest_centroïd(double *dot, int K, int dataset_columns, double centroids_array[K][dataset_columns]){
-    int closest_centroid = 0;
-    double min_distance = euclidean_distance(dot, centroids_array[0], dataset_columns);
-    for(int i = 0; i < K; i++){
-        double distance = euclidean_distance(dot, centroids_array[i], dataset_columns);
-        if(distance < min_distance){
-            min_distance = distance;
-            closest_centroid = i;
-        }
-    }
-    return closest_centroid;
-}
-
-void assign_clusters(int K, double **clusters_array, double centroids_array, int dataset_size, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size)
-{
     for (int i = 0; i < dataset_rows; i++)
     {
-        for (int j = 0; j < dataset_columns; j++)
+        int closest_centroid = compute_closest_centroid(
+            dataset_array[i],  // point dans le dataset
+            K,
+            dataset_columns,
+            centroids_array);
+        int position = cluster_sizes[closest_centroid];
+                  // On regarde combien de points sont déjà dans ce cluster
+            clusters_array[closest_centroid][position] = i;
+                  // On ajoute le point au cluster
+            cluster_sizes[closest_centroid]++;
+                          // Le cluster contient maintenant un point de plus
+    }
+}
+
+// ETAPE 3 : Mettre à jour les centroïdes.
+
+// Pour chaque cluster, on calcule la moyenne de tous les points. Cette moyenne devient le nouveau centroïde.
+
+void update_centroids(
+    int K,
+    int dataset_rows,
+    int dataset_columns,
+    double dataset_array[dataset_rows][dataset_columns],
+    int clusters_array[K][dataset_rows],
+    int cluster_sizes[K],
+    double centroids_array[K][dataset_columns])
+{
+    for (int cluster = 0; cluster < K; cluster++)
+    {
+        for (int dimension = 0; dimension < dataset_columns; dimension++)
         {
-            int dot = dataset_array[i][j];
-            int closest_centroid = compute_distance(centroids_array, K, dot);
-            put_in_cluster(clusters_array, dot, closest_centroid, cluster_size);
-            // create cluster
+            double sum = 0;
+            for (int point = 0; point < cluster_sizes[cluster]; point++)
+            {
+                intpoint_number = clusters_array[cluster][point];
+                doublecoordinate = dataset_array[point_number][dimension];
+                sum = sum + coordinate;
+            }
+            double average = sum / cluster_sizes[cluster];
+            centroids_array[cluster][dimension] = average;
         }
     }
-}
-
-void put_in_cluster(int **clusters_array, int *dot, int closest_centroid, int cluster_size)
-{
-    for (int i = 0; i < cluster_size; i++)
-    {
-        if (clusters_array[closest_centroid][i] == NULL)
-        {
-            clusters_array[closest_centroid][i] = dot;
-            return;
-        }
-    }
-}
-
-// Update Step: Recalculate the position of each of the  K centroids.
-// The new position for a centroid is the mean (average position) of all the data points assigned to its cluster
-// in the previous step. If a cluster ends up with no points assigned to it (which can happen, especially with
-// poor initialization), the centroid might be removed or randomly reassigned, though typically it stays put until
-// points are assigned in a later iteration.
-
-int calculate_average(double *cluster_dots, int cluster_size)
-{
-    int total = 0;
-    for (int i = 0; i < cluster_size; i++)
-    {
-        total += cluster_dots[i];
-    }
-    return total / cluster_size;
-}
-
-int update_centroids(int K, double **centroids_array, double clusters_array, int cluster_size)
-{
-    int distance = 0;
-    for (int i = 0; i < K; i++)
-    {
-        int centroid = centroids_array[i];
-        int new_centroid_value = calculate_average(clusters_array[i], cluster_size);
-        centroids_array[i] = new_centroid_value;
-        distance = abs(centroid - new_centroid_value);
-    }
-    return distance;
 }
 
 void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size)
@@ -146,29 +97,57 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     size_t weight_nb = dataset_columns;
 
     double weight[weight_nb];
-    memset(weight, 0, sizeof(weight)); // on initialise le tableau de poids à 0.
+    memset(weight, 0, sizeof(weight));
+      // on initialise le tableau de poids à 0.
 
-    // LAYER 1
+    // COUCHE 1
 
-    // LAYER 2
+    // COUCHE 2
 
-    // a) implementing K-MEANS
+    // K = nombre de clusters. On le trouve en divisant la taille totale du dataset par la taille d'un cluster.
+        int K = dataset_size / cluster_size;
+        // clusters_array = de dimension K (nombre de clusters)
+        int clusters_array[K][dataset_rows];
+        // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]
+    // cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
+        int cluster_sizes[K];
 
-    // K is the number of clusters and centroïds we need. To find K, we need to divide the size of the dataset by the number of
-    // dots inside each cluster.
+        // step 1: on trouve les centroïds à partir des données du dataset (dataset_array)
+        find_centroids(
+            K,
+            dataset_rows,
+            dataset_columns,
+            dataset_array,
+            centroids_array);
 
-    int K = dataset_size / cluster_size;
-    double centroids_array = find_centroids(K, dataset_rows, dataset_columns, dataset_array, dataset_size);
-    double clusters_array[K][cluster_size];
-    assign_clusters(K, clusters_array, centroids_array, dataset_size, dataset_rows, dataset_columns, dataset_array);
-    int distance = update_centroids(K, centroids_array);
-    if (distance < 2)
+        //step 2: K-MEANS
+        int max_iterations = 100;
+    for (int iteration = 0; iteration < max_iterations; iteration++)
     {
-        return;
+
+                // Mettre chaque point dans son cluster
+            assign_clusters(
+                K,
+                dataset_rows,
+                dataset_columns,
+                dataset_array,
+                centroids_array,
+                clusters_array,
+                cluster_sizes);
+
+                // Recalculer les centroïdes
+            update_centroids(
+                K,
+                dataset_rows,
+                dataset_columns,
+                dataset_array,
+                clusters_array,
+                cluster_sizes,
+                centroids_array);
     }
-    // When the algorithm stops, the centroids represent the centers of the final clusters, and each data point belongs to the cluster associated with the nearest final centroid.
+        // When the algorithm stops, the centroids represent the centers of the final clusters, and each data point belongs to the cluster associated with the nearest final centroid.
 
-    //
+    //
 
-    // LAYER 3
+    // COUCHE 3
 }
