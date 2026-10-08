@@ -9,14 +9,10 @@
 // La meilleure méthode pour trouver K (nombre souhaité) centroïds est de les sélectionner de façon aléatoire dans le dataset et de les désigner
 // comme les centroïdes initiaux.
 
-void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns])
-{
-        // K est le nombre de centroïdes que l'on souhaite obtenir.
-        for (int i = 0; i < K; i++)
-
-    {
-        int random_centroid = rand() % dataset_rows;
-          // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
+void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns]){
+     // K est le nombre de centroïdes que l'on souhaite obtenir.
+    for (int i = 0; i < K; i++){
+        int random_centroid = rand() % dataset_rows; // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
             for (int j = 0; j < dataset_columns; j++)
 
         {
@@ -52,12 +48,9 @@ void assign_clusters(
             K,
             dataset_columns,
             centroids_array);
-        int position = cluster_sizes[closest_centroid];
-                  // On regarde combien de points sont déjà dans ce cluster
-            clusters_array[closest_centroid][position] = i;
-                  // On ajoute le point au cluster
-            cluster_sizes[closest_centroid]++;
-                          // Le cluster contient maintenant un point de plus
+        int position = cluster_sizes[closest_centroid]; // On regarde combien de points sont déjà dans ce cluster
+        clusters_array[closest_centroid][position] = i; // On ajoute le point au cluster
+        cluster_sizes[closest_centroid]++; // Le cluster contient maintenant un point de plus
     }
 }
 
@@ -81,8 +74,8 @@ void update_centroids(
             double sum = 0;
             for (int point = 0; point < cluster_sizes[cluster]; point++)
             {
-                intpoint_number = clusters_array[cluster][point];
-                doublecoordinate = dataset_array[point_number][dimension];
+                int point_number = clusters_array[cluster][point];
+                double coordinate = dataset_array[point_number][dimension];
                 sum = sum + coordinate;
             }
             double average = sum / cluster_sizes[cluster];
@@ -97,22 +90,21 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     size_t weight_nb = dataset_columns;
 
     double weight[weight_nb];
-    memset(weight, 0, sizeof(weight));
-      // on initialise le tableau de poids à 0.
+    memset(weight, 0, sizeof(weight));// on initialise le tableau de poids à 0.
+    // COUCHE 1
+    
+    // COUCHE 2
+    
+    // K = nombre de clusters. On le trouve en divisant la taille totale du dataset par la taille d'un cluster.
+    int K = dataset_size / cluster_size;
+    
+    // clusters_array = de dimension K (nombre de clusters)
+    int clusters_array[K][dataset_rows];
+    // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]
+    // cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
+    int cluster_sizes[K];
 
-    // COUCHE 1
-
-    // COUCHE 2
-
-    // K = nombre de clusters. On le trouve en divisant la taille totale du dataset par la taille d'un cluster.
-        int K = dataset_size / cluster_size;
-        // clusters_array = de dimension K (nombre de clusters)
-        int clusters_array[K][dataset_rows];
-        // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]
-    // cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
-        int cluster_sizes[K];
-
-        // step 1: on trouve les centroïds à partir des données du dataset (dataset_array)
+    // step 1: on trouve les centroïds à partir des données du dataset (dataset_array)
         find_centroids(
             K,
             dataset_rows,
@@ -120,12 +112,11 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
             dataset_array,
             centroids_array);
 
-        //step 2: K-MEANS
-        int max_iterations = 100;
+    //step 2: K-MEANS
+    int max_iterations = 100;
     for (int iteration = 0; iteration < max_iterations; iteration++)
     {
-
-                // Mettre chaque point dans son cluster
+        // Mettre chaque point dans son cluster
             assign_clusters(
                 K,
                 dataset_rows,
@@ -135,7 +126,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
                 clusters_array,
                 cluster_sizes);
 
-                // Recalculer les centroïdes
+        // Recalculer les centroïdes
             update_centroids(
                 K,
                 dataset_rows,
@@ -145,9 +136,6 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
                 cluster_sizes,
                 centroids_array);
     }
-        // When the algorithm stops, the centroids represent the centers of the final clusters, and each data point belongs to the cluster associated with the nearest final centroid.
-
-    //
-
-    // COUCHE 3
+    // When the algorithm stops, the centroids represent the centers of the final clusters, and each data point belongs to the cluster associated with the nearest final centroid.
+    // COUCHE 3
 }
