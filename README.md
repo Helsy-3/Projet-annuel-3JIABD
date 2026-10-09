@@ -77,107 +77,23 @@ Pour entraîner le PMC, il faut un dataset d'images étiquetées : chaque photo 
 Deuxième étape: transformer les photos en vecteurs 
 Un PMC ne peut pas directement comprendre un fichier .jpg. Il lui faut des nombres. Pour commencer simplement, on peut transformer chaque image en une petite image, par exemple 32 × 32 pixels, puis la transformer en un vecteur.
 
-image_array = np.array(image)
 
-Cette ligne transforme l'image en un tableau NumPy.
+Rétropropagation
+La fonction retropropager est le « professeur » du réseau. Son rôle est de corriger les erreurs. Elle analyse la réponse du réseau pour une image donnée et ajuste légèrement tous les poids (W1, W2) et biais (b1, b2) pour qu'il fasse mieux la prochaine fois.
 
-[
-  [[255,   0,   0] (rouge), [  0, 255,   0] (vert)],
-  [[  0,   0, 255] (bleu), [255, 255, 255] (blanc)]
-]
+Étape 1 : Tester l'image et voir ce que le réseau répond
+forward(pixel_array, hidden, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
 
-(Selon les valeurs R, G, B).
+On commence par exécuter forward. Le réseau analyse l'image (pixel_array) et génère sa prédiction dans le tableau output (ex: 70% Plastique, 10% Verre, 20% Métal).
 
-image_array = image_array / 255.0 (Nombres 0–255 → nombres 0–1)
 
-Cette ligne permet de normaliser en divisant chaque valeur de chaque pixel par 255.
-Exemple: 64/255 donne 0.25.
-Exemple: 128/255 donne 0.50.
-Exemple: 192/255 donne 0.75.
-Exemple: 255/255 donne 1.0.
+Mathématiquement, W1 ressemble à une matrice :
 
-En effet, comme le Perceptron va faire des calculs mathématiques avec ces valeurs, il est préférable de lui donner des valeurs dans une échelle raisonnable, ici entre 0 et 1, plutôt que des valeurs entre 0 et 255.
+        couche_cachee[i] = pixel_array[j] * W1[i * couche_cachee_sizej];
 
-image_vector = image_array.flatten()
-
-La fonction flatten() prend la grille de pixels de l'image et la transformer en une seule longue liste de nombres. En gros, cette ligne fait passer image_array de ça: 
-
-image_array =
-[
-    [[1, 0, 0], [0, 1, 0]],
-    [[0, 0, 1], [1, 1, 1]]
-]
-
-à ça: 
-
-[
-  1, 0, 0,
-  0, 1, 0,
-  0, 0, 1,
-  1, 1, 1
-]
-
-<=> Ce qui est l'équivalent de ça : [1,0,0,0,1,0,0,0,1,1,1,1]. En réalité, les "neurones" de la couche d'entrée sont juste les pixels de l'image. On les appelle "neurones d'entrée" uniquement par abus de langage pour schématiser le réseau.
-
-Une fois le vecteur obtenu, on l'ajoute au tableau X. X = les données que le modèle regarde.
-
-                X.append(image_vector)
-
-On ajoute son index, c'est-à-dire son numéro de classe, au tableau y. y = les réponses qu'on veut que le modèle apprenne à prédire.
-
-                y.append(index)
-
-Cette ligne sert à dire que l'image X appartient appartient à la classe numéro class_index (0, 1, 2). On peut donc comparer le résultat obtenu du modèle à la classe réelle (0 - plastic, 1 - verre , 2 - métal) et mesurer l'écart entre la sortie du modèle et la prédiction attendue. 
-
-Troisième étape: 
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
-)
-
-Tu prends tes images et tu les sépares :
-80 % → entraînement
-20 % → test
-
-Création du PMC
-mlp = MLPClassifier(
-    hidden_layer_sizes=(32, 16),
-    activation="relu",
-    solver="adam",
-    max_iter=500,
-    random_state=42
-)
-
-* hidden_layer_sizes=(32, 16) signifie donc deux couches cachées, une de 32 neurones et une de 16.
-
-* activation="relu" veut dire que les neurones des couches cachées utilisent la fonction ReLU (Rectified Linear Unit).
-Elle est très simple: La fonction ReLU (pour Rectified Linear Unit ou unité linéaire rectifiée) est une fonction d'activation non linéaire très populaire en apprentissage profond, définie par la formule (f(x) = max(0, x)).
-
-Donc : 
-si x < 0  → la fonction renvoie 0
-si x ≥ 0  →  la fonction renvoie x
-
-Exemple: SI 
-x = -3  → ReLU(x) = 0
-x = -0.5 → ReLU(x) = 0
-x = 2   → ReLU(x) = 2
-x = 5   → ReLU(x) = 5
-
-Cette fonction est très importante pour le projet, car elle permet au PMC d'apprendre des relations non linéaires.
-Sans fonction d'activation non linéaire, empiler plusieurs couches reviendrait essentiellement à faire encore une transformation linéaire.
-En gros, ReLU introduit la non-linéarité nécessaire au perceptron multicouche pour apprendre des relations complexes entre les caractéristiques des images.
-
-mlp.fit(X_train, y_train)
-
-C'est ici que le PMC apprend à partir de tes photos.
-
-photo → classe correcte
-
-y_pred = mlp.predict(X_test)
+- i indique quel neurone caché on regarde.
+- j indique quel pixel/entrée on regarde. 
+Pourquoi multiplier i par 12 ? Parce qu'avant d'arriver aux poids du neurone i, il faut sauter toutes les cases des neurones précédents.
 
 # Implémentation en C et lien avec Python
 On a écrit les algorithmes (perceptron, PMC) dans une bibliothèque en C, et on les relie ensuite à notre notebook Python pour les tester et comparer les résultats.
