@@ -9,14 +9,11 @@
 // La meilleure méthode pour trouver K (nombre souhaité) centroïdes est de les sélectionner de façon aléatoire dans le dataset et de les désigner
 // comme les centroïdes initiaux.
 
-void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns])
-{
+void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns]){
     // K est le nombre de centroïdes que l'on souhaite obtenir.
-    for (int i = 0; i < K; i++)
-    {
+    for (int i = 0; i < K; i++){
         int random_centroid = rand() % dataset_rows; // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
-        for (int j = 0; j < dataset_columns; j++)
-        {
+        for (int j = 0; j < dataset_columns; j++){
             centroids_array[i][j] = dataset_array[random_centroid][j];
         }
     }
@@ -27,14 +24,11 @@ void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset
 // Pour assigner les points du dataset au centroïde le plus proche, on va calculer la distance de chaque point à chacun des centroïdes.
 // Pour calculer la distance, on utilise la distance euclidienne.
 
-void assign_clusters(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K])
-{
-    for (int i = 0; i < K; i++)
-    {
+void assign_clusters(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K]){
+    for (int i = 0; i < K; i++){
         cluster_sizes[i] = 0;
     }
-    for (int i = 0; i < dataset_rows; i++)
-    {
+    for (int i = 0; i < dataset_rows; i++){
         int closest_centroid = compute_closest_centroid(dataset_array[i], K, dataset_columns, centroids_array);
         int position = cluster_sizes[closest_centroid]; // On regarde combien de points sont déjà dans ce cluster
         clusters_array[closest_centroid][position] = i; // On ajoute le point au cluster
@@ -63,18 +57,15 @@ void update_centroids_mean(int K, int dataset_rows, int dataset_columns, double 
 }
 
 // ETAPE 4: calculer les sigma. Le sigma, basé sur la distance moyenne entre les centroïdes, sert de largeur aux fonctions gaussiennes.
-double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns])
-{
+// Sigma représente la distance moyenne entre toutes les pairs de centroïdes.
+double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
     double sum_distance = 0.0;
     int number_of_distances = 0;
-    for (int i = 0; i < K; i++)
-    {
-        for (int j = i + 1; j < K; j++)
-        {
+    for (int i = 0; i < K; i++){
+        for (int j = i + 1; j < K; j++){
             double squared_distance = 0.0;
-            for (int dimension = 0; dimension < dataset_columns; dimension++)
-            {
-                double difference = centroids_array[i][dimension] - centroids_array[j][dimension];
+            for (int vecteur_index = 0; vecteur_index < dataset_columns; vecteur_index++){
+                double difference = centroids_array[i][vecteur_index] - centroids_array[j][vecteur_index];
                 squared_distance += difference * difference;
             }
             double distance = sqrt(squared_distance);
@@ -94,15 +85,12 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
 // Une activation RBF, c'est simplement une mesure de « proximité » entre ton point et un centroïde.
 
 // ETAPE 5: Interprétation RBF de la distance à chaque centre (regarder une vidéo Youtube sur ça)
-void compute_rbf_closeness_to_centroid(int K, int dataset_columns, double dot[dataset_columns], double centroids_array[K][dataset_columns], double sigma, double rbf_closeness[K])
-{
+void compute_rbf_closeness_to_centroid(int K, int dataset_columns, double dot[dataset_columns], double centroids_array[K][dataset_columns], double sigma, double rbf_closeness[K]){
     // On regarde chaque centroïde
-    for (int i = 0; i < K; i++)
-    {
+    for (int i = 0; i < K; i++){
         double distance_carre = 0;
         // On calcule la distance entre le point et le centroïde
-        for (int j = 0; j < dataset_columns; j++)
-        {
+        for (int j = 0; j < dataset_columns; j++){
             double difference = dot[j] - centroids_array[i][j];
             distance_carre += difference * difference;
         }
@@ -117,35 +105,28 @@ void compute_rbf_closeness_to_centroid(int K, int dataset_columns, double dot[da
 // La fonction train_weights() va modifier ces poids petit à petit pour que le réseau fasse de meilleures prédictions.
 
 // ETAPE 6 : Entrainer les poids rétro-activement
-void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs)
-{
+void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
     double rbf_closeness[K];
-    for (int epoch = 0; epoch < epochs; epoch++)
-    {
+    for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
-        for (int i = 0; i < dataset_rows; i++)
-        {
+        for (int i = 0; i < dataset_rows; i++){
             compute_rbf_activations(K, dataset_columns, dataset_array[i], centroids_array, sigma, rbf_closeness);
             double output = compute_output(K, rbf_closeness, weights);
             double error = targets[i] - output;
             total_error += error * error;
-            for (int j = 0; j < K; j++)
-            {
+            for (int j = 0; j < K; j++){
                 weights[j] += learning_rate * error * rbf_closeness[j];
             }
         }
-
         // Erreur moyenne
         double mse = total_error / dataset_rows;
         printf("Epoch %d - MSE = %f\n", epoch, mse);
     }
 }
 
-void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size)
-{
+void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int cluster_size){
     size_t dataset_size = dataset_rows;
     size_t weight_nb = dataset_columns;
-
     double weights[weight_nb];
     memset(weights, 0, sizeof(weights)); // on initialise le tableau de poids à 0.
 
@@ -165,85 +146,37 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     int cluster_sizes[K];
 
     // step 1: on trouve les centroïds à partir des données du dataset (dataset_array)
-    find_centroids(
-        K,
-        dataset_rows,
-        dataset_columns,
-        dataset_array,
-        centroids_array);
+    find_centroids(K, dataset_rows, dataset_columns, dataset_array, centroids_array);
 
     // step 2: K-MEANS. On stabilise les centroïds sur plusieurs itérations. En gros, c'est de l'apprentissage non-supervisé.
     // Le modèle trouve lui même les similitudes entre les données et les groupe en k groupes distincts.
     int max_iterations = 100;
-    for (int iteration = 0; iteration < max_iterations; iteration++)
-    {
+    for (int iteration = 0; iteration < max_iterations; iteration++){
         // Mettre chaque point dans son cluster
-        assign_clusters(
-            K,
-            dataset_rows,
-            dataset_columns,
-            dataset_array,
-            centroids_array,
-            clusters_array,
-            cluster_sizes);
+        assign_clusters(K, dataset_rows, dataset_columns, dataset_array, centroids_array, clusters_array, cluster_sizes);
 
         // Recalculer les centroïdes
-        update_centroids_mean(
-            K,
-            dataset_rows,
-            dataset_columns,
-            dataset_array,
-            clusters_array,
-            cluster_sizes,
-            centroids_array);
+        update_centroids_mean(K, dataset_rows, dataset_columns, dataset_array, clusters_array, cluster_sizes, centroids_array);
     }
 
     // When the algorithm stops, the centroids represent the centers of the final clusters, and each data point belongs to the cluster associated with the nearest final centroid.
 
     // Calcul de sigma
-    double sigma = compute_sigma(
-        K,
-        dataset_columns,
-        centroids_array);
-
+    double sigma = compute_sigma(K, dataset_columns, centroids_array);
     printf("Sigma = %f\n", sigma);
 
     // APPRENTISSAGE DES POIDS
     double learning_rate = 0.01;
     int epochs = 1000;
-    train_weights(
-        K,
-        dataset_rows,
-        dataset_columns,
-        dataset_array,
-        targets,
-        centroids_array,
-        sigma,
-        weights,
-        learning_rate,
-        epochs);
+    train_weights(K, dataset_rows, dataset_columns, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
 
     double activations[K];
     printf("\nResultats :\n");
-    for (int i = 0; i < dataset_rows; i++)
-    {
+    for (int i = 0; i < dataset_rows; i++){
         // Calcul des activations
-        compute_rbf_activations(
-            K,
-            dataset_columns,
-            dataset_array[i],
-            centroids_array,
-            sigma,
-            activations);
+        compute_rbf_activations(K, dataset_columns, dataset_array[i], centroids_array, sigma, activations);
         // Calcul de la sortie
-        double output = compute_output(
-            K,
-            activations,
-            weights);
-        printf(
-            "Point %d : cible = %f, prediction = %f\n",
-            i,
-            targets[i],
-            output);
+        double output = compute_output(K, activations, weights);
+        printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
 }
