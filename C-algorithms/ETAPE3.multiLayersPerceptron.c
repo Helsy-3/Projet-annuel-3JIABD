@@ -109,9 +109,11 @@ void retropropager(double x[IN], int classe_attendue, double lr)
 }
 
 // Entraine le reseau sur des donnees envoyees depuis Python (vraies photos du dataset)
-// vecteurs : n_exemples * IN valeurs a la suite (chaque exemple = IN valeurs)
-// classes  : n_exemples valeurs (0, 1 ou 2)
-int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples)
+// vecteurs    : n_exemples * IN valeurs a la suite (chaque exemple = IN valeurs)
+// classes     : n_exemples valeurs (0, 1 ou 2)
+// predictions : rempli avec la classe predite pour chaque exemple (utile pour savoir
+//               quelle photo precise est bien/mal classee, pas juste le total)
+int predire_pmc_dataset(double *vecteurs, int *classes, int n_exemples, int *predictions)
 {
     srand(42);
     init_poids();
@@ -128,11 +130,18 @@ int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples)
     {
         double h[H], out[OUT];
         forward(&vecteurs[n * IN], h, out);
-        int prediction = predire(out);
-        if (prediction == classes[n])
+        predictions[n] = predire(out);
+        if (predictions[n] == classes[n])
             bonnes_predictions++;
     }
     return bonnes_predictions;
+}
+
+// Entraine le reseau sur le dataset reel et ne renvoie que le nombre de bonnes predictions
+int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples)
+{
+    int predictions[50]; // taille max largement suffisante pour notre dataset
+    return predire_pmc_dataset(vecteurs, classes, n_exemples, predictions);
 }
 
 // Cas de test : appelle run_pmc_dataset() avec les exemples fixes definis plus haut

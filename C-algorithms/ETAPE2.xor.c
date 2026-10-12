@@ -10,18 +10,21 @@ double X_brut[4][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {1, 1, 0}};
 // XOR + caracteristique x1*x2 (3e colonne) : devient lineairement separable
 double X_transforme[4][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {1, 1, 1}};
 
-// Entraine un perceptron sur les donnees X et renvoie le nombre d'erreurs finales
-int train(double X[4][3])
+// Entraine un perceptron sur les donnees X. Remplit w[0..2] et bias avec ce qui a ete
+// appris (utile pour colorier les zones de decision), et renvoie le nombre d'erreurs finales
+int entrainer(double X[4][3], double *w, double *bias)
 {
-    double w[3] = {0.0, 0.0, 0.0};
-    double bias = 0.0;
+    w[0] = 0.0;
+    w[1] = 0.0;
+    w[2] = 0.0;
+    *bias = 0.0;
 
     for (int rep = 0; rep < 1000; rep++)
     {
         int errors = 0;
         for (int i = 0; i < 4; i++)
         {
-            double out = bias;
+            double out = *bias;
             for (int j = 0; j < 3; j++)
                 out += X[i][j] * w[j];
             int pred = (out >= 0) ? 1 : -1;
@@ -30,7 +33,7 @@ int train(double X[4][3])
             {
                 for (int j = 0; j < 3; j++)
                     w[j] += learning_rate * Y[i] * X[i][j];
-                bias += learning_rate * Y[i];
+                *bias += learning_rate * Y[i];
                 errors++;
             }
         }
@@ -41,7 +44,7 @@ int train(double X[4][3])
     int erreurs_finales = 0;
     for (int i = 0; i < 4; i++)
     {
-        double out = bias;
+        double out = *bias;
         for (int j = 0; j < 3; j++)
             out += X[i][j] * w[j];
         int pred = (out >= 0) ? 1 : -1;
@@ -53,12 +56,26 @@ int train(double X[4][3])
 
 int run_xor_brut(void)
 {
-    return train(X_brut);
+    double w[3], bias;
+    return entrainer(X_brut, w, &bias);
 }
 
 int run_xor_transforme(void)
 {
-    return train(X_transforme);
+    double w[3], bias;
+    return entrainer(X_transforme, w, &bias);
+}
+
+// Renvoie les poids appris sur le cas brut (2D), pour tracer/colorier les zones de decision
+int entrainer_xor_brut(double *w, double *bias)
+{
+    return entrainer(X_brut, w, bias);
+}
+
+// Pareil, mais sur le cas transforme (avec x1*x2), pour colorier ses zones de decision
+int entrainer_xor_transforme(double *w, double *bias)
+{
+    return entrainer(X_transforme, w, bias);
 }
 
 int main(void)
