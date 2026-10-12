@@ -1,98 +1,85 @@
 #include <stdio.h>
+#include <string.h>
 
-// Cas de test officiel du prof ("Linear Simple")
-// X_data = les points (x1, x2), Y_pred = la classe attendue pour chaque point (1 ou -1)
-int X_data[3][2] = {{1, 1}, {2, 3}, {3, 3}};
-int Y_pred[3] = {1, -1, -1};
+// EXEMPLE
+//int X_data[3][2] = {{1, 1}, {2, 3}, {3, 3}};
+//int Y_pred[3] = {1, -1, -1};
 
-// Entraine un perceptron simple sur X_data. Remplit poids[0], poids[1] et bias
-// avec ce que le perceptron a appris (utile pour tracer la droite de separation),
-// et renvoie le nombre d'erreurs finales
-int entrainer_perceptron(double *poids, double *bias)
+int entrainer_perceptron(double learning_rate, double *bias, int epochs, int X_data_lignes, int X_data_colonnes, double X_data[X_data_lignes][X_data_colonnes], double Y_pred[])
 {
-    // On part de poids et biais a zero : le perceptron ne sait encore rien
-    poids[0] = 0.0;
-    poids[1] = 0.0;
-    *bias = 0.0;
-    double learning_rate = 0.1; // a quelle vitesse le perceptron corrige ses erreurs
+    size_t dataset_size = X_data_lignes; // taille du dataset
+    size_t poids_nb = X_data_colonnes;
 
-    // Boucle d'entrainement : on repete jusqu'a 1000 fois, ou jusqu'a ce qu'il n'y ait plus d'erreur
-    for (int rep = 0; rep < 1000; rep++)
+    // Dans le data set, chaque donnée est un vecteur avec des caractéristiques [1, 2, 3, 4]
+    // A chaque vecteur correspond un poids. Il y a autant de poids qu'il y a de caractéristiques par donnée du dataset.
+
+    // Il faut qu'il y ait autant de poids qu'il y a de caractéristiques pour une donnée.
+    // Exemple 1: une maison avec deux caractéristiques: la superficie et le nombre d'étages : 2 caractéristiques => donc il faut 2 poids.
+    // Exemple 2: une photo de bouteille avec 32 pixels : 32 caractéristiques => donc il faut 32 poids.
+
+    double poids[poids_nb];
+    memset(poids, 0, sizeof(poids)); // on initialise le tableau de poids à 0.
+    int total_errors = 0;
+
+    for (int i = 0; i < epochs; i++) // on entraine le modèle autant de fois qu'il y a de répétitions
     {
-        int total_errors = 0;
-        for (int i = 0; i < 3; i++)
+        int total_errors = 0; // on ca comptabiliser le nombre d'erreurs à chaque fois en comparant Y_pred (le résultat attendu)
+                              // avec le résultat obtenu avec les poids initialisés à 0.
+
+        for (int i = 0; i < dataset_size; i++) // on veut itérer sur toutes les données du data_set
         {
-            // Le neurone calcule : (x1 * poids1) + (x2 * poids2) + biais
-            double linear_output = X_data[i][0] * poids[0] + X_data[i][1] * poids[1] + *bias;
+            double linear_output = 0; // un seul neurone
 
-            // Si le resultat est positif ou nul, le perceptron predit la classe 1, sinon -1
-            int pred = (linear_output >= 0) ? 1 : -1;
-
-            // Si la prediction est fausse, on ajuste les poids et le biais
-            // dans la direction qui aurait donne la bonne reponse
-            if (pred != Y_pred[i])
+            for (int y = 0; y < poids_nb; y++)
             {
-                poids[0] += learning_rate * Y_pred[i] * X_data[i][0];
-                poids[1] += learning_rate * Y_pred[i] * X_data[i][1];
-                *bias += learning_rate * Y_pred[i];
-                total_errors++;
+                linear_output += X_data[i][y] * poids[y]; // un seul neurone donc on aditionne chaque membre du vecteur et ça donne la sortie de l'unique neurone
             }
+
+            linear_output = linear_output + *bias; // sortie de l'unique neurone
+
+            int pred = (linear_output >= 0) ? 1 : -1; // prediction du modèle
+            if (pred != Y_pred[i])
+                { // si la prédiction obtenue est différente de la prédiction attendue
+                    for(int y = 0; y < poids_nb ; y++){
+                    poids[y] += learning_rate * Y_pred[i] * X_data[i][y];
+                    }
+                    *bias += learning_rate * Y_pred[i];
+                    total_errors++;
+                }
+
         }
-        // Si un tour complet s'est fait sans aucune erreur, le perceptron a fini d'apprendre
-        if (total_errors == 0)
-            break;
     }
-
-    // Une fois l'entrainement termine, on recompte les erreurs avec les poids finaux
-    int erreurs_finales = 0;
-    for (int i = 0; i < 3; i++)
-    {
-        double sortie = X_data[i][0] * poids[0] + X_data[i][1] * poids[1] + *bias;
-        int test_pred = (sortie >= 0) ? 1 : -1;
-        if (test_pred != Y_pred[i])
-            erreurs_finales++;
-    }
-    return erreurs_finales;
+    return total_errors;
 }
 
-// Cas de test : entraine le perceptron et ne renvoie que le nombre d'erreurs
-// (les poids sont calcules mais pas utilises ici, juste pour un test simple)
-int run_perceptron(void)
+// Entraine un perceptron sur des donnees envoyees depuis Python (vraies photos du dataset)
+// vecteurs : n_exemples * 12 valeurs a la suite (chaque exemple = 12 valeurs, une photo reduite en 2x2 pixels)
+// labels   : n_exemples valeurs, -1 ou 1
+int run_perceptron_dataset(
+    double *vecteurs,
+    int *labels,
+    int n_exemples,
+    int n_features,
+    double learning_rate,
+    int max_iter,
+    double *weights,
+    double *bias)
 {
-    double poids[2];
-    double bias;
-    return entrainer_perceptron(poids, &bias);
-}
-
-// Meme perceptron que ci-dessus, mais entraine sur des donnees envoyees depuis Python
-// (de vraies photos du dataset, pas les 3 points fixes de test)
-// vecteurs    : n_exemples * 12 valeurs a la suite (chaque exemple = 12 valeurs, une photo reduite en 2x2 pixels)
-// labels      : n_exemples valeurs, -1 ou 1
-// predictions : rempli avec ce que le perceptron predit pour chaque exemple (utile pour savoir
-//               quelle photo precise est bien/mal classee, pas juste le total)
-int predire_perceptron_dataset(double *vecteurs, int *labels, int n_exemples, int *predictions)
-{
-    double weights[12] = {0};
-    double bias = 0.0;
-    double learning_rate = 0.1;
-
-    for (int rep = 0; rep < 1000; rep++)
+    for (int rep = 0; rep < max_iter; rep++)
     {
         int total_errors = 0;
         for (int i = 0; i < n_exemples; i++)
         {
-            // Meme calcul que plus haut, mais sur 12 valeurs au lieu de 2
-            // (vecteurs[i * 12 + j] = la valeur j de l'exemple i, puisque tout est stocke a la suite)
-            double linear_output = bias;
-            for (int j = 0; j < 12; j++)
-                linear_output += vecteurs[i * 12 + j] * weights[j];
+            double linear_output = *bias;
+            for (int j = 0; j < n_features; j++)
+                linear_output += vecteurs[i * n_features + j] * weights[j];
             int pred = (linear_output >= 0) ? 1 : -1;
 
             if (pred != labels[i])
             {
-                for (int j = 0; j < 12; j++)
-                    weights[j] += learning_rate * labels[i] * vecteurs[i * 12 + j];
-                bias += learning_rate * labels[i];
+                for (int j = 0; j < n_features; j++)
+                    weights[j] += learning_rate * labels[i] * vecteurs[i * n_features + j];
+                *bias += learning_rate * labels[i];
                 total_errors++;
             }
         }
@@ -103,25 +90,12 @@ int predire_perceptron_dataset(double *vecteurs, int *labels, int n_exemples, in
     int erreurs_finales = 0;
     for (int i = 0; i < n_exemples; i++)
     {
-        double sortie = bias;
-        for (int j = 0; j < 12; j++)
-            sortie += vecteurs[i * 12 + j] * weights[j];
-        predictions[i] = (sortie >= 0) ? 1 : -1;
-        if (predictions[i] != labels[i])
+        double sortie = *bias;
+        for (int j = 0; j < n_features; j++)
+            sortie += vecteurs[i * n_features + j] * weights[j];
+        int test_pred = (sortie >= 0) ? 1 : -1;
+        if (test_pred != labels[i])
             erreurs_finales++;
     }
     return erreurs_finales;
-}
-
-// Cas de test : entraine le perceptron sur le dataset reel et ne renvoie que le nombre d'erreurs
-int run_perceptron_dataset(double *vecteurs, int *labels, int n_exemples)
-{
-    int predictions[50]; // taille max largement suffisante pour notre dataset
-    return predire_perceptron_dataset(vecteurs, labels, n_exemples, predictions);
-}
-
-int main(void)
-{
-    printf("Cas de test - erreurs finales : %d/3\n", run_perceptron());
-    return 0;
 }

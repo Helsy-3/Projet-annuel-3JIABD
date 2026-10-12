@@ -18,3 +18,13 @@ ressources-perso/
 
 # VSCode
 .vscode/
+
+# Secrets (cle API)
+.env
+
+# Dataset Kaggle brut (trop lourd pour git, chacun le telecharge)
+dataset-img/kaggle/
+dataset-img/*.npz
+kaggle.json
+*.exe
+*.dll
