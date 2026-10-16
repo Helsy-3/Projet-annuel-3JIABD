@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 void init_poids(double *poids, int taille)
@@ -29,23 +30,24 @@ void calculer_sortie_reseau(double *pixel_array, double *hidden_layer, double *o
         hidden_layer[i] = bias_layer_1[i];
         for (int j = 0; j < pixel_array_length; j++)
         {
-            hidden_layer[i] += pixel_array[j] * W1[i * hidden_layer_length + j];
+            hidden_layer[i] += pixel_array[j] * W1[j * hidden_layer_length + i];
         }
     }
 
     // calcul de la couche de sortie
     for(int i = 0; i < output_length; i++)
-    {    
+    {
         output_layer[i] = bias_layer_2[i];
         for( int j = 0; j < hidden_layer_length ; j++)
         {
-            output_layer[i] += hidden_layer[j] * W2[j * hidden_layer_length + i];
+            output_layer[i] += hidden_layer[j] * W2[j * output_length + i];
         }
     }
 
-    // conversion en probabilités
+    // conversion en probabilités (softmax : il faut exponentier avant de diviser par la somme)
     double somme = 0.0;
     for(int j = 0; j < output_length; j++){
+        output_layer[j] = exp(output_layer[j]);
         somme += output_layer[j];
     }
     for(int j = 0; j < output_length; j++){
@@ -123,10 +125,13 @@ void retropropager(double *pixel_array, int classe_attendue, double learning_rat
 // vecteurs : n_exemples * IN valeurs a la suite (chaque exemple = IN valeurs)
 // classes  : n_exemples valeurs (0, 1 ou 2)
 
-// Entraînement complet
+// Entraînement complet. W1_sortie/b1_sortie/W2_sortie/b2_sortie sont des tableaux deja
+// alloues par Python : on y recopie les poids appris, pour que Python puisse les reutiliser
+// ensuite avec predire_pmc() sur des donnees jamais vues pendant l'entrainement (split train/test).
 int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
-                    int in_dim, int h_dim, int out_dim) {
-    
+                    int in_dim, int h_dim, int out_dim,
+                    double *W1_sortie, double *b1_sortie, double *W2_sortie, double *b2_sortie) {
+
     srand(42);
 
     double *W1 = malloc(in_dim * h_dim * sizeof(double));
@@ -160,11 +165,72 @@ int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
         }
     }
 
+    memcpy(W1_sortie, W1, in_dim * h_dim * sizeof(double));
+    memcpy(b1_sortie, b1, h_dim * sizeof(double));
+    memcpy(W2_sortie, W2, h_dim * out_dim * sizeof(double));
+    memcpy(b2_sortie, b2, out_dim * sizeof(double));
+
     free(W1); free(b1);
     free(W2); free(b2);
     free(h);  free(out);
 
     return bonnes_predictions;
+}
+
+// Predit la classe d'un seul exemple a partir de poids DEJA entraines (par run_pmc_dataset
+// ci-dessus). Ne fait aucun entrainement : utile pour evaluer sur des donnees de test separees.
+int predire_pmc(double *pixel_array, double *W1, double *b1, double *W2, double *b2,
+                int in_dim, int h_dim, int out_dim) {
+    double *h = malloc(h_dim * sizeof(double));
+    double *out = malloc(out_dim * sizeof(double));
+
+    calculer_sortie_reseau(pixel_array, h, out, W1, b1, W2, b2, in_dim, h_dim, out_dim);
+    int classe = predire(out, out_dim);
+
+    free(h); free(out);
+    return classe;
+}
+
+// Sauvegarde les poids appris dans un fichier texte, pour les reutiliser plus tard avec
+// predire_pmc() sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
+int pmc_sauvegarder(const char *chemin, double *W1, double *b1, double *W2, double *b2,
+                    int in_dim, int h_dim, int out_dim) {
+    FILE *f = fopen(chemin, "w");
+    if (f == NULL)
+        return -1;
+
+    fprintf(f, "%d %d %d\n", in_dim, h_dim, out_dim);
+    for (int i = 0; i < in_dim * h_dim; i++) fprintf(f, "%.17g ", W1[i]);
+    fprintf(f, "\n");
+    for (int i = 0; i < h_dim; i++) fprintf(f, "%.17g ", b1[i]);
+    fprintf(f, "\n");
+    for (int i = 0; i < h_dim * out_dim; i++) fprintf(f, "%.17g ", W2[i]);
+    fprintf(f, "\n");
+    for (int i = 0; i < out_dim; i++) fprintf(f, "%.17g ", b2[i]);
+    fprintf(f, "\n");
+
+    fclose(f);
+    return 0;
+}
+
+int pmc_charger(const char *chemin, double *W1, double *b1, double *W2, double *b2,
+               int *in_dim, int *h_dim, int *out_dim) {
+    FILE *f = fopen(chemin, "r");
+    if (f == NULL)
+        return -1;
+
+    if (fscanf(f, "%d %d %d", in_dim, h_dim, out_dim) != 3) { fclose(f); return -1; }
+    for (int i = 0; i < (*in_dim) * (*h_dim); i++)
+        if (fscanf(f, "%lf", &W1[i]) != 1) { fclose(f); return -1; }
+    for (int i = 0; i < *h_dim; i++)
+        if (fscanf(f, "%lf", &b1[i]) != 1) { fclose(f); return -1; }
+    for (int i = 0; i < (*h_dim) * (*out_dim); i++)
+        if (fscanf(f, "%lf", &W2[i]) != 1) { fclose(f); return -1; }
+    for (int i = 0; i < *out_dim; i++)
+        if (fscanf(f, "%lf", &b2[i]) != 1) { fclose(f); return -1; }
+
+    fclose(f);
+    return 0;
 }
 
 int main(void) {
@@ -180,7 +246,9 @@ int main(void) {
     };
     int vraies_classes[3] = {2, 0, 1};
 
-    int bonnes = run_pmc_dataset((double*)X, vraies_classes, n_exemples, in_dim, h_dim, out_dim);
+    double W1[12 * 8], b1[8], W2[8 * 3], b2[3];
+    int bonnes = run_pmc_dataset((double*)X, vraies_classes, n_exemples, in_dim, h_dim, out_dim,
+                                  W1, b1, W2, b2);
 
     printf("Bonnes predictions : %d/%d\n", bonnes, n_exemples);
     return 0;

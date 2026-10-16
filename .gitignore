@@ -26,5 +26,8 @@ ressources-perso/
 dataset-img/kaggle/
 dataset-img/*.npz
 kaggle.json
+
+# Modeles entraines/sauvegardes (generes par app/entrainer_modele.py, pas du code source)
+app/modeles/
 *.exe
 *.dll

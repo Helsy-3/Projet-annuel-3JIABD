@@ -141,18 +141,40 @@ lib_etape1.run_perceptron_dataset.argtypes = [
 erreurs = lib_etape1.run_perceptron_dataset(vecteurs_c, labels_c, len(labels))
 ```
 
-Résultats sur cette portion du dataset :
-- Modèle linéaire : 0 erreur sur 4 photos (2 plastique, 2 métal)
-- PMC : 6 bonnes prédictions sur 6 photos (2 plastique, 2 verre, 2 métal)
+## Entraînement et test : pourquoi on sépare les photos
 
-## Début de l'application (tuyauterie)
+Au début, chaque modèle était entraîné et évalué sur exactement les mêmes photos - donc la précision affichée ne disait rien de plus que "le modèle a-t-il appris ces photos par cœur", pas "est-ce qu'il reconnaîtrait une photo jamais vue". On a donc ajouté une vraie séparation entraînement/test (80%/20%, au moins 1 photo de test par catégorie même quand une catégorie est petite) pour le Perceptron (étape 1) et le RBF (étape 5) : on entraîne sur ~80% des photos, puis on mesure la précision sur les ~20% restantes, jamais vues pendant l'entraînement.
 
-Le sujet demande à terme une application qui communique avec une API hébergeant les modèles entraînés. Pour ce rendu, on a juste commencé cette architecture, dans `app/` :
+Au départ, cette séparation n'était pas possible pour le PMC (étape 3) : `run_pmc_dataset()` entraînait un réseau tout neuf et l'évaluait immédiatement sur le même tableau, en une seule fonction, puis libérait (`free()`) les poids appris avant de retourner - Python ne récupérait jamais le réseau entraîné pour le réutiliser sur d'autres données. On a corrigé ça en modifiant `run_pmc_dataset()` pour qu'elle recopie les poids appris (W1, b1, W2, b2) dans des tableaux fournis par Python avant de les libérer, et en ajoutant une nouvelle fonction `predire_pmc()` qui prédit la classe d'un exemple à partir de poids déjà entraînés, sans ré-entraîner. Ça permet maintenant d'entraîner sur les photos d'entraînement puis de prédire sur les photos de test avec les mêmes poids, comme pour le Perceptron et le RBF.
 
-- `app/server.py` : un serveur Flask avec une seule route, `/ping`, qui répond `{"message": "le serveur fonctionne"}`
-- `app/client.py` : un script Python qui appelle cette route avec la bibliothèque `requests` et affiche la réponse
+Résultats actuels (82 photos : 10 plastique, 68 verre, 4 métal - un jeu provisoire, le dataset complet de 1000 photos/catégorie d'Helsy n'est pas encore intégré) :
+- Modèle linéaire (étape 1, plastique vs métal) : 55% en entraînement, 67% en test - le modèle linéaire peine sur de vraies photos, cohérent avec sa limite déjà démontrée sur les cas non linéaires (XOR, Cross)
+- PMC (étape 3) : 88% en entraînement, 76% en test
+- RBF (étape 5) : 88% en entraînement, 94% en test
 
-Ça ne fait pas encore de prédiction, l'objectif est juste de montrer que la communication client/serveur fonctionne. Les vrais modèles (nos bibliothèques C) seront branchés dessus dans un prochain rendu.
+## Sauvegarde et chargement des modèles
+
+Le SVM (étape 4) avait déjà `svm_sauvegarder()`/`svm_charger()`. On a ajouté la même possibilité pour le Perceptron (`perceptron_sauvegarder`/`perceptron_charger`), le PMC (`pmc_sauvegarder`/`pmc_charger`, en plus des poids maintenant exposés - voir plus haut) et le RBF (`rbf_sauvegarder`/`rbf_charger`). Le principe est le même partout : un fichier texte simple (une ligne d'en-tête avec les tailles, puis les nombres), écrit avec `fprintf`/lu avec `fscanf` - pas de format binaire compliqué. Chaque script `test_etapeN.py` vérifie qu'un modèle rechargé donne exactement les mêmes poids que l'original.
+
+## Client/serveur : prédire sur une nouvelle photo
+
+Le sujet demande une application qui communique avec une API hébergeant les modèles entraînés, capable de prédire sur de nouvelles données. `app/` contient maintenant :
+
+- `app/entrainer_modele.py` : entraîne un SVM un-contre-tous sur `dataset-img/` (noyau RBF) et sauvegarde un fichier par classe dans `app/modeles/` (ignoré par git, comme les `.so` - chacun régénère ses modèles localement avec ce script)
+- `app/server.py` : un serveur Flask qui charge ces modèles au démarrage et expose deux routes :
+  - `/ping` : vérifie que le serveur tourne
+  - `/predict` (POST) : reçoit un vecteur de 12 valeurs (une photo déjà réduite en 2×2 pixels et normalisée) en JSON, et renvoie la classe prédite avec le score de chaque modèle
+- `app/client.py` : prend une photo en argument, la transforme en vecteur (`image_vers_vecteur()`, comme partout ailleurs), l'envoie au serveur et affiche la prédiction
+
+Exemple d'utilisation (depuis la racine du repo, dans deux terminaux) :
+
+```bash
+python app/entrainer_modele.py          # une seule fois, pour creer app/modeles/
+python app/server.py                    # terminal 1 : lance le serveur
+python app/client.py dataset-img/verre/01.jpeg   # terminal 2 : demande une prediction
+```
+
+Testé sur une photo de chaque catégorie (jamais vue par le modèle au moment du test, mais déjà dans le jeu d'entraînement puisqu'on entraîne sur tout `dataset-img/` ici) : les 3 prédictions sont correctes, avec un score net pour la bonne classe et des scores négatifs pour les deux autres.
 
 # Etape 4 : SVM avec un noyau RBF
 Un SVM avec un noyau RBF (Radial Basis Function, ou noyau gaussien) est un modèle de machine learning qui sert à classer des données ou à faire des prédictions lorsque les catégories ne peuvent pas être séparées par une simple ligne droite. 
@@ -184,9 +206,20 @@ Contrairement aux réseaux classiques qui utilisent des fonctions d'activation g
 
 Théoriquement et structurellement, un réseau RBF ne comporte qu'une seule couche cachée, ce qui lui permet d'assurer une approximation universelle sans nécessiter la superposition de multiples couches intermédiaires. 
 
+## Branchement de l'étape 5 : une particularité
+
+Contrairement aux autres étapes, la fonction `RBNF()` du fichier C ne renvoie rien à Python - elle fait seulement des `printf()` côté C. On ne peut donc pas s'en servir comme point d'entrée unique. La solution, sans modifier le fichier C : on appelle depuis Python, dans le même ordre que `RBNF()` le fait en interne, les fonctions individuelles déjà exportées (`find_centroids`, `assign_clusters`, `update_centroids_mean`, `calculer_sigma`, `train_weights`, `calculer_rbf_closeness_to_centroid`, `calculer_output`) - ce qui permet de récupérer les centroïdes, le sigma et les poids appris directement dans des tableaux numpy, et de les réutiliser pour prédire sur de nouvelles données (voir la séparation entraînement/test plus bas).
+
+Pendant les tests, on a trouvé un vrai bug numérique dans le k-means partagé (`assign_clusters`/`update_centroids_mean`) : si un cluster se retrouve vide à une itération, `update_centroids_mean` divise par zéro et son centroïde devient `NaN`. Comme la fonction `calculer_closest_centroid` (dans `utils.c`) compare toujours la distance par rapport au centroïde 0 en premier, dès que ce centroïde-là devient `NaN`, tous les points lui sont assignés pour toujours (une comparaison `distance < NaN` est toujours fausse) - ce qui contamine tout le modèle derrière (sigma, poids, prédictions). On a corrigé ça côté Python uniquement, sans toucher au C : on fait plusieurs tirages aléatoires des centroïdes de départ et on garde celui qui apprend le mieux (une pratique standard pour le k-means, qui est sensible à son initialisation).
+
+Enfin, un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste une limite connue du RBF tel qu'il est implémenté ici : le sigma (largeur des gaussiennes) est une seule valeur globale, calculée comme la distance moyenne entre tous les centroïdes - trop grossière pour distinguer les bandes fines de ce damier, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500, sans amélioration). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
 
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 
+
+En reprenant les étapes 3 (PMC) et 5 (RBF) après la fusion du travail de l'équipe, les résultats étaient soit mauvais soit complètement incohérents, alors que le code compilait sans erreur. Pour le PMC, le forward pass mélangeait la taille de la couche d'entrée et celle de la couche cachée dans l'indexation des poids, et le softmax oubliait l'exponentielle avant de normaliser — deux erreurs de calcul silencieuses, sans crash ni warning, donc faciles à manquer.
+
+Pour le RBF, le programme tournait mais produisait des prédictions aberrantes (des centaines de millions au lieu de nombres entre 0 et 7). En creusant, on s'est rendu compte que `utils.h` et `utils.c` ne parlaient pas la même langue : le header déclarait les fonctions utilitaires en anglais (`compute_output`, `compute_closest_centroid`), alors que le `.c` les définissait en français (`calculer_output`, `calculer_closest_centroid`) — une dérive de convention de nommage en cours de route plutôt que de simples fautes de frappe. Sans prototype correspondant au bon nom, le compilateur supposait par défaut qu'une fonction renvoyant un nombre à virgule flottante renvoyait en réalité un entier, corrompant silencieusement chaque résultat. Une fois les deux fichiers remis en cohérence (tout en français), le RBF s'est mis à converger normalement.
 
 # Définitions de notions (annexes)
 

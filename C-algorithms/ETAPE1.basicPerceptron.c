@@ -99,3 +99,44 @@ int run_perceptron_dataset(
     }
     return erreurs_finales;
 }
+
+// Sauvegarde les poids et le biais appris dans un fichier texte, pour les reutiliser plus tard
+// sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
+int perceptron_sauvegarder(const char *chemin, double *weights, double bias, int n_features)
+{
+    FILE *f = fopen(chemin, "w");
+    if (f == NULL)
+        return -1;
+
+    fprintf(f, "%d %.17g\n", n_features, bias);
+    for (int j = 0; j < n_features; j++)
+        fprintf(f, "%.17g ", weights[j]);
+    fprintf(f, "\n");
+
+    fclose(f);
+    return 0;
+}
+
+int perceptron_charger(const char *chemin, double *weights, double *bias, int *n_features)
+{
+    FILE *f = fopen(chemin, "r");
+    if (f == NULL)
+        return -1;
+
+    if (fscanf(f, "%d %lf", n_features, bias) != 2)
+    {
+        fclose(f);
+        return -1;
+    }
+    for (int j = 0; j < *n_features; j++)
+    {
+        if (fscanf(f, "%lf", &weights[j]) != 1)
+        {
+            fclose(f);
+            return -1;
+        }
+    }
+
+    fclose(f);
+    return 0;
+}

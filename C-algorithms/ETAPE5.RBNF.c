@@ -109,15 +109,15 @@ void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_
 
 void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], int cluster_size){
     size_t dataset_size = dataset_rows;
-    size_t weight_nb = dataset_columns;
-    double weights[weight_nb];
-    memset(weights, 0, sizeof(weights)); // on initialise le tableau de poids à 0.
 
     // COUCHE 1
 
     // COUCHE 2
 
-    int K = dataset_size / cluster_size;  // K = nombre de clusters. 
+    int K = dataset_size / cluster_size;  // K = nombre de clusters.
+    size_t weight_nb = K; // un poids par centroide, pas par caracteristique d'entree
+    double weights[weight_nb];
+    memset(weights, 0, sizeof(weights)); // on initialise le tableau de poids à 0.
     double centroids_array[K][dataset_columns];   // centroids_array = K centroids, then for each point in the centroïd vector, we use dataset_columns dimensions
     int clusters_array[K][dataset_rows]; // NOTE:  clusters_array ne stocke pas les vecteurs. Il stocke seulement les indices des vecteurs.
     int cluster_sizes[K]; // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]. Ce qui signifie : cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
@@ -141,7 +141,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     // step 3: RBF
 
     // Calcul de sigma
-    double sigma = compute_sigma(K, dataset_columns, centroids_array);
+    double sigma = calculer_sigma(K, dataset_columns, centroids_array);
 
     // apprentissage des poids
     double learning_rate = 0.01;
@@ -151,8 +151,40 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     double dot_proximity_to_centroids[K]; //ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
     printf("\nResultats :\n");
     for (int i = 0; i < dataset_rows; i++){
-        calculer_rbf_closeness_to_centroid(K, dataset_columns, dataset_array[i], centroids_array, sigma, dot_proximity_to_centroids); 
-        double output = compute_output(K, dot_proximity_to_centroids, weights);
+        calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+        double output = calculer_output(K, dot_proximity_to_centroids, weights);
         printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
+}
+
+// Sauvegarde les centroides, le sigma et les poids appris dans un fichier texte, pour les
+// reutiliser plus tard sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
+int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double *weights, int K, int dataset_columns){
+    FILE *f = fopen(chemin, "w");
+    if (f == NULL)
+        return -1;
+
+    fprintf(f, "%d %d %.17g\n", K, dataset_columns, sigma);
+    for (int i = 0; i < K * dataset_columns; i++) fprintf(f, "%.17g ", centroids[i]);
+    fprintf(f, "\n");
+    for (int i = 0; i < K; i++) fprintf(f, "%.17g ", weights[i]);
+    fprintf(f, "\n");
+
+    fclose(f);
+    return 0;
+}
+
+int rbf_charger(const char *chemin, double *centroids, double *weights, int *K, int *dataset_columns, double *sigma){
+    FILE *f = fopen(chemin, "r");
+    if (f == NULL)
+        return -1;
+
+    if (fscanf(f, "%d %d %lf", K, dataset_columns, sigma) != 3) { fclose(f); return -1; }
+    for (int i = 0; i < (*K) * (*dataset_columns); i++)
+        if (fscanf(f, "%lf", &centroids[i]) != 1) { fclose(f); return -1; }
+    for (int i = 0; i < *K; i++)
+        if (fscanf(f, "%lf", &weights[i]) != 1) { fclose(f); return -1; }
+
+    fclose(f);
+    return 0;
 }
