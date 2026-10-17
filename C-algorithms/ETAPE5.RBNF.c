@@ -35,8 +35,7 @@ void assign_clusters(int K, int dataset_rows, int dataset_columns, double datase
 // ETAPE 3 : Mettre à jour les centroïdes.
 // Pour chaque cluster, on calcule la moyenne de tous les points. 
 // Cette moyenne devient le nouveau centroïde.
-void update_centroids_mean(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][dataset_columns])
-{
+void update_centroids_mean(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][dataset_columns]){
     // int clusters_array[K][dataset_rows] : taille totale K, dataset_rows: nombre maximal de points que chaque cluster peut contenir
     int clusters_number = K;
     for (int i = 0; i < clusters_number; i++){ // on calcule la moyenne du cluster à l'index i
@@ -53,8 +52,8 @@ void update_centroids_mean(int K, int dataset_rows, int dataset_columns, double 
     }
 }
 
-// ETAPE 4: calculer les sigma. Le sigma, basé sur la distance moyenne entre les centroïdes, sert de largeur aux fonctions gaussiennes.
-// Sigma représente la distance moyenne entre toutes les pairs de centroïdes.
+// ETAPE 4: Le sigma, basé sur la distance moyenne entre les centroïdes, sert de largeur aux fonctions gaussiennes.
+// Sigma représente la distance moyenne entre toutes les paires de centroïdes.
 double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
     double sum_distance = 0.0;
     int number_of_distances = 0;
@@ -75,31 +74,31 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
 }
 
 // ETAPE 5 : Calculer la distance d'un point par rapport au centre avec RBF
-void calculer_rbf_closeness_to_centroid(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double rbf_closeness[K]){
-    for (int i = 0; i < K; i++){ // On regarde chaque centroïde
+void calculer_rbf_closeness_to_centroid(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
+    for (int i = 0; i < K; i++){ // On parcourt tous les centroïdes
         double distance_carre = 0;
         for (int j = 0; j < dataset_columns; j++){
-            double difference = dot[j] - centroids_array[i][j]; // On calcule la distance entre le point et le centroïde
+            double difference = dot[j] - centroids_array[i][j]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
             distance_carre += difference * difference;
         }
         double distance = sqrt(distance_carre);           // On obtient la distance
-        rbf_closeness[i] = rbf_distance(distance, sigma); // On transforme la distance en activation RBF
+        dot_proximity_to_centroids[i] = rbf_distance(distance, sigma); // On transforme la distance en activation RBF
     }
 }
 
 // ETAPE 6 : Entrainer les poids rétro-activement
 // La fonction train_weights() va modifier ces poids petit à petit pour que le réseau fasse de meilleures prédictions.
 void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
-    double rbf_closeness[K]; // rbf_closeness est réécrit pour chaque point
+    double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
         for (int i = 0; i < dataset_rows; i++){
-            calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, rbf_closeness);
-            double output = calculer_output(K, rbf_closeness, weights);
+            calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+            double output = calculer_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
             total_error += error * error;
             for (int j = 0; j < K; j++){
-                weights[j] += learning_rate * error * rbf_closeness[j];
+                weights[j] += learning_rate * error * dot_proximity_to_centroids[j];
             }
         }
         double mse = total_error / dataset_rows; // Erreur moyenne
@@ -113,7 +112,6 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     // COUCHE 1
 
     // COUCHE 2
-
     int K = dataset_size / cluster_size;  // K = nombre de clusters.
     size_t weight_nb = K; // un poids par centroide, pas par caracteristique d'entree
     double weights[weight_nb];
@@ -129,10 +127,8 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     // On stabilise les centroïds sur plusieurs itérations. Le modèle trouve lui même les similitudes entre les données et les groupe en k groupes distincts.
     int max_iterations = 100;
     for (int iteration = 0; iteration < max_iterations; iteration++){
-        
         // Mettre chaque point dans son cluster
         assign_clusters(K, dataset_rows, dataset_columns, dataset_array, centroids_array, clusters_array, cluster_sizes);
-
         // Recalculer les centroïdes
         update_centroids_mean(K, dataset_rows, dataset_columns, dataset_array, clusters_array, cluster_sizes, centroids_array);
     }
@@ -157,8 +153,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     }
 }
 
-// Sauvegarde les centroides, le sigma et les poids appris dans un fichier texte, pour les
-// reutiliser plus tard sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
+// Sauvegarde les centroides, le sigma et les poids appris dans un fichier texte, pour les reutiliser plus tard sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
 int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double *weights, int K, int dataset_columns){
     FILE *f = fopen(chemin, "w");
     if (f == NULL)
