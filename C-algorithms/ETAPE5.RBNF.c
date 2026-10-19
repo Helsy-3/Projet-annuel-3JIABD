@@ -53,17 +53,18 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 // ETAPE 4: Le sigma, basé sur la distance moyenne entre les centroïdes, sert de largeur aux fonctions gaussiennes.
 // Sigma représente la distance moyenne entre toutes les paires de centroïdes.
 double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
-    double sum_distance = 0.0;
-    int number_of_distances = 0;
-    for (int i = 0; i < K; i++){
-        for (int j = i + 1; j < K; j++){
+    double sum_distance = 0.0; // somme de toutes les distances calculées entre tous les centroïdes
+    int number_of_distances = 0; // nombre total de distances calculées entre les paires de centroïdes
+    
+    for (int centroïd_index = 0; centroïd_index < K; centroïd_index++){ // on parcourt tous les centroïdes
+        for (int j = centroïd_index + 1; j < K; j++){
             double squared_distance = 0.0;
-            for (int vecteur_index = 0; vecteur_index < dataset_columns; vecteur_index++){
-                double difference = centroids_array[i][vecteur_index] - centroids_array[j][vecteur_index];
-                squared_distance += difference * difference;
+            for (int vecteur_index = 0; vecteur_index < dataset_columns; vecteur_index++){ // parcourir toutes les dimensions des centroïdes
+                double difference = centroids_array[centroïd_index][vecteur_index] - centroids_array[j][vecteur_index]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
+                squared_distance += difference * difference; // Élever cette différence au carré et l'ajouter à la somme des carrés des différences
             }
-            double distance = sqrt(squared_distance);
-            sum_distance += distance;
+            double distance = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
+            sum_distance += distance;  // Ajouter cette distance à la somme de toutes les distances
             number_of_distances++;
         }
     }
@@ -75,11 +76,11 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
 void calculer_rbf_closeness_to_centroid(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
     for (int i = 0; i < K; i++){ // On parcourt tous les centroïdes
         double distance_carre = 0;
-        for (int j = 0; j < dataset_columns; j++){
-            double difference = dot[j] - centroids_array[i][j]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
+        for (int dimension = 0; dimension < dataset_columns; dimension++){
+            double difference = dot[dimension] - centroids_array[i][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
             distance_carre += difference * difference;
         }
-        double distance = sqrt(distance_carre);           // On obtient la distance
+        double distance = sqrt(distance_carre); // On obtient la distance
         dot_proximity_to_centroids[i] = rbf_distance(distance, sigma); // On transforme la distance en activation RBF
     }
 }
