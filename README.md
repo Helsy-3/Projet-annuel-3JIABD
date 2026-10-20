@@ -214,6 +214,16 @@ Pendant les tests, on a trouvé un vrai bug numérique dans le k-means partagé 
 
 Enfin, un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste une limite connue du RBF tel qu'il est implémenté ici : le sigma (largeur des gaussiennes) est une seule valeur globale, calculée comme la distance moyenne entre tous les centroïdes - trop grossière pour distinguer les bandes fines de ce damier, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500, sans amélioration). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
 
+Mise à jour des centres et clusters: 
+K-means fonctionne par répétition de deux étapes :
+- assign_clusters : chaque point rejoint le cluster dont le centroïde est le plus proche.
+- update_centroids : chaque centroïde se déplace vers la moyenne des points de son cluster.
+-> L'affectation des points dépend de la position des centroïdes. Or, après la mise à jour, les centroïdes changent de position. Certains points peuvent donc changer de cluster.
+
+Lors de la mise à jour des centroïdes, on calcule leurs moyennes:
+Pour chaque cluster, on calcule la moyenne de tous les points. Cette moyenne devient le nouveau centroïde.
+Il faut ensuite recommencer l'affectation à chaque cluster, car, comme les centroïdes ont bougé, il faut vérifier si chaque point appartient toujours au cluster. 
+
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 
 
