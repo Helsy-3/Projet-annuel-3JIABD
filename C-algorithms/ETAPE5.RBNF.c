@@ -8,14 +8,26 @@
 void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns])
 {
     // K est le nombre de centroïdes que l'on souhaite obtenir.
+    // On tire les points SANS REMISE (mélange de Fisher-Yates) : si le même point était choisi deux fois,
+    // deux centroïdes seraient identiques, l'un resterait vide et update_centroids() diviserait par 0 (NaN).
+    int *indices = malloc(dataset_rows * sizeof(int));
+    for (int i = 0; i < dataset_rows; i++)
+    {
+        indices[i] = i;
+    }
     for (int i = 0; i < K; i++)
     {
-        int random_centroid = rand() % dataset_rows; // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
+        int r = i + rand() % (dataset_rows - i); // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
+        int tmp = indices[i];
+        indices[i] = indices[r];
+        indices[r] = tmp;
+        int random_centroid = indices[i];
         for (int j = 0; j < dataset_columns; j++)
         {
             centroids_array[i][j] = dataset_array[random_centroid][j];
         }
     }
+    free(indices);
 }
 
 // ETAPE 2 : Assigner les points du dataset au centroïde le plus proche.
@@ -36,6 +48,7 @@ void assign_clusters(int K, int dataset_rows, int dataset_columns, double datase
 // Cette moyenne devient le nouveau centroïde.
 void update_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][dataset_columns]) {
     for (int cluster_index = 0; cluster_index < K; cluster_index++) {// Pour chaque cluster
+        if (cluster_sizes[cluster_index] == 0) continue; // Cluster vide : on garde l'ancien centroïde (sinon 0/0 = NaN)
         for (int vector_index = 0; vector_index < dataset_columns; vector_index++) { // Pour chaque dimension d'un point
             double sum = 0.0;
             // Parcourir tous les points du cluster
@@ -50,25 +63,32 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
     }
 }
 
-// ETAPE 4: Le sigma, basé sur la distance moyenne entre les centroïdes, sert de largeur aux fonctions gaussiennes.
-// Sigma représente la distance moyenne entre toutes les paires de centroïdes.
+// ETAPE 4: Le sigma sert de largeur aux fonctions gaussiennes.
+// Sigma représente la distance moyenne entre chaque centroïde et son voisin le PLUS PROCHE.
+// (La moyenne sur toutes les paires donnait un sigma ~ taille du dataset : gaussiennes trop larges, toutes
+// quasi identiques, et le réseau ne pouvait pas suivre une forme fine comme une croix.)
 double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
-    double sum_distance = 0.0; // somme de toutes les distances calculées entre tous les centroïdes
-    int number_of_distances = 0; // nombre total de distances calculées entre les paires de centroïdes
-    
+    if (K < 2)
+        return 1.0; // un seul centroïde : pas de voisin, on prend une largeur par défaut
+
+    double sum_distance = 0.0; // somme des distances de chaque centroïde à son plus proche voisin
+
     for (int centroïd_index = 0; centroïd_index < K; centroïd_index++){ // on parcourt tous les centroïdes
-        for (int j = centroïd_index + 1; j < K; j++){
+        double min_distance = INFINITY;
+        for (int j = 0; j < K; j++){
+            if (j == centroïd_index) continue;
             double squared_distance = 0.0;
             for (int vecteur_index = 0; vecteur_index < dataset_columns; vecteur_index++){ // parcourir toutes les dimensions des centroïdes
                 double difference = centroids_array[centroïd_index][vecteur_index] - centroids_array[j][vecteur_index]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
                 squared_distance += difference * difference; // Élever cette différence au carré et l'ajouter à la somme des carrés des différences
             }
             double distance = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
-            sum_distance += distance;  // Ajouter cette distance à la somme de toutes les distances
-            number_of_distances++;
+            if (distance < min_distance)
+                min_distance = distance; // On garde la plus petite distance : celle du plus proche voisin
         }
+        sum_distance += min_distance;
     }
-    double sigma = sum_distance / number_of_distances;
+    double sigma = sum_distance / K;
     return sigma;
 }
 
