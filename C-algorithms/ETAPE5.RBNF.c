@@ -94,7 +94,7 @@ void recursive_train_weights(int K, int dataset_rows, int dataset_columns, doubl
         for (int i = 0; i < dataset_rows; i++){
             // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
             calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
-            double output = calculer_output(K, dot_proximity_to_centroids, weights);
+            double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
             total_error += error * error;
             for (int j = 0; j < K; j++){
@@ -148,7 +148,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     printf("\nResultats :\n");
     for (int i = 0; i < dataset_rows; i++){
         calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
-        double output = calculer_output(K, dot_proximity_to_centroids, weights);
+        double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
         printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
 }

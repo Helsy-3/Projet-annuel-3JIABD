@@ -57,7 +57,7 @@ double rbf_distance(double distance, double sigma){
 
 // cette fonction multiplie chaque valeur de proximité du point au centroide par un poids, puis additionne tous les résultats.
 // Les poids indiquent l'importance que le réseau accorde à chaque valeur de proximité pour calculer sa prédiction.
-double calculer_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
+double calculer_dot_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
     double output = 0.0;
     for (int i = 0; i < K; i++){
         output += weights[i] * dot_proximity_to_centroids[i];
