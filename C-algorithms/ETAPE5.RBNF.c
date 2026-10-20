@@ -124,7 +124,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     find_centroids(K, dataset_rows, dataset_columns, dataset_array, centroids_array);
 
     // step 2: K-MEANS. 
-    // On stabilise les centroïds sur plusieurs itérations. Le modèle trouve lui même les similitudes entre les données et les groupe en k groupes distincts.
+    // On stabilise les centroïdes sur plusieurs itérations. Le modèle trouve lui même les similitudes entre les données et les groupe en k groupes distincts.
     int max_iterations = 100;
     for (int iteration = 0; iteration < max_iterations; iteration++){
         // Mettre chaque point dans son cluster
