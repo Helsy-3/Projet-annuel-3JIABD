@@ -49,6 +49,8 @@ min_distance = distance;
 return closest_centroid;
 }
 
+// la fonction rbf_distance renvoie une valeur de proximité, pas une valeur géométrique
+// Plus la distance est petite, plus la valeur de rbf_distance() est grande.
 double rbf_distance(double distance, double sigma){
     return exp(-(distance * distance)/ (2.0 * sigma * sigma));
 }

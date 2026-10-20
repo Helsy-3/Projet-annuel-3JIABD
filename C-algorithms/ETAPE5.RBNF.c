@@ -87,11 +87,12 @@ void calculer_rbf_closeness_to_centroid(int dataset_columns, double dot[dataset_
 
 // ETAPE 6 : Entrainer les poids rétro-activement
 // La fonction train_weights() va modifier ces poids petit à petit pour que le réseau fasse de meilleures prédictions.
-void train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
+void recursive_train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
     double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
         for (int i = 0; i < dataset_rows; i++){
+            // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
             calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
@@ -141,7 +142,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     // apprentissage des poids
     double learning_rate = 0.01;
     int epochs = 1000;
-    train_weights(K, dataset_rows, dataset_columns, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
+    recursive_train_weights(K, dataset_rows, dataset_columns, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
 
     double dot_proximity_to_centroids[K]; //ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
     printf("\nResultats :\n");
@@ -157,13 +158,11 @@ int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double 
     FILE *f = fopen(chemin, "w");
     if (f == NULL)
         return -1;
-
     fprintf(f, "%d %d %.17g\n", K, dataset_columns, sigma);
     for (int i = 0; i < K * dataset_columns; i++) fprintf(f, "%.17g ", centroids[i]);
     fprintf(f, "\n");
     for (int i = 0; i < K; i++) fprintf(f, "%.17g ", weights[i]);
     fprintf(f, "\n");
-
     fclose(f);
     return 0;
 }
