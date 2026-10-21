@@ -65,26 +65,24 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 
 // ETAPE 4: Le sigma sert de largeur aux fonctions gaussiennes.
 // Sigma représente la distance moyenne entre chaque centroïde et son voisin le PLUS PROCHE.
-// (La moyenne sur toutes les paires donnait un sigma ~ taille du dataset : gaussiennes trop larges, toutes
-// quasi identiques, et le réseau ne pouvait pas suivre une forme fine comme une croix.)
-double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
+ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
     if (K < 2)
         return 1.0; // un seul centroïde : pas de voisin, on prend une largeur par défaut
 
     double sum_distance = 0.0; // somme des distances de chaque centroïde à son plus proche voisin
 
-    for (int centroïd_index = 0; centroïd_index < K; centroïd_index++){ // on parcourt tous les centroïdes
+    for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++){ // on parcourt tous les centroïdes
         double min_distance = INFINITY;
-        for (int j = 0; j < K; j++){
-            if (j == centroïd_index) continue;
+        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++){
+            if (other_centroïd_index == current_centroïd_index) continue;
             double squared_distance = 0.0;
-            for (int vecteur_index = 0; vecteur_index < dataset_columns; vecteur_index++){ // parcourir toutes les dimensions des centroïdes
-                double difference = centroids_array[centroïd_index][vecteur_index] - centroids_array[j][vecteur_index]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
+            for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++){ // parcourir toutes les dimensions des centroïdes
+                double difference = centroids_array[current_centroïd_index][vecteur_dimension] - centroids_array[other_centroïd_index][vecteur_dimension]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
                 squared_distance += difference * difference; // Élever cette différence au carré et l'ajouter à la somme des carrés des différences
             }
-            double distance = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
-            if (distance < min_distance)
-                min_distance = distance; // On garde la plus petite distance : celle du plus proche voisin
+            double distance_to_centroid = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
+            if (distance_to_centroid < min_distance)
+                min_distance = distance_to_centroid; // On garde la plus petite distance : celle du plus proche voisin
         }
         sum_distance += min_distance;
     }
@@ -111,8 +109,7 @@ void recursive_train_weights(int K, int dataset_rows, int dataset_columns, doubl
     double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
-        for (int i = 0; i < dataset_rows; i++){
-            // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
+        for (int i = 0; i < dataset_rows; i++){ // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
             calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
