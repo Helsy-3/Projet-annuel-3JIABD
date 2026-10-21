@@ -63,12 +63,9 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
     }
 }
 
-// ETAPE 4: Le sigma sert de largeur aux fonctions gaussiennes.
-// Sigma représente la distance moyenne entre chaque centroïde et son voisin le PLUS PROCHE.
+// ETAPE 4: Le sigma représente la distance moyenne entre chaque centroïde et son voisin le PLUS PROCHE.
+// Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
  double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
-    if (K < 2)
-        return 1.0; // un seul centroïde : pas de voisin, on prend une largeur par défaut
-
     double sum_distance = 0.0; // somme des distances de chaque centroïde à son plus proche voisin
 
     for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++){ // on parcourt tous les centroïdes
@@ -91,15 +88,15 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 }
 
 // ETAPE 5 : Calculer la distance d'un point par rapport au centre avec RBF
-void calculer_rbf_closeness_to_centroid(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
-    for (int i = 0; i < K; i++){ // On parcourt tous les centroïdes
+void calculer_dot_rbf_closeness_to_centroids(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
+    for (int centroid = 0; centroid < K; centroid++){ 
         double distance_carre = 0;
         for (int dimension = 0; dimension < dataset_columns; dimension++){
-            double difference = dot[dimension] - centroids_array[i][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
+            double difference = dot[dimension] - centroids_array[centroid][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
             distance_carre += difference * difference;
         }
-        double distance = sqrt(distance_carre); // On obtient la distance
-        dot_proximity_to_centroids[i] = rbf_distance(distance, sigma); // On transforme la distance en activation RBF
+        double distance_to_centroid = sqrt(distance_carre); // On obtient la distance
+        dot_proximity_to_centroids[centroid] = rbf_distance(distance_to_centroid, sigma); // On transforme chaque distance du point au centroïde en une valeur d'activation RBF
     }
 }
 
