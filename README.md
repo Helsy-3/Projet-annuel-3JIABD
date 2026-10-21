@@ -267,3 +267,15 @@ tanh: ses sorties oscillent entre -1 et 1.
 La principale différence entre la fonction tanh (tangente hyperbolique) et la fonction sigmoïde réside dans leur plage de valeurs de sortie et leur centrage sur zéro. 
 
 ![hey2](./img-readme/tanh:sigmoïde.png)
+
+
+
+# UTILS 
+
+gcc -shared -fPIC ETAPE5.RBNF.c utils.c -o ETAPE5.RBNF.so
+
+-shared : créer une bibliothèque partagée
+Au lieu de créer un programme exécutable classique, cette option demande à gcc de créer une bibliothèque que d'autres programmes peuvent charger, par exemple Python avec ctypes.
+
+-fPIC : générer du code indépendant de sa position
+PIC signifie Position-Independent Code. En gros, cela permet au code compilé de fonctionner même si le système charge la bibliothèque à une adresse mémoire différente selon le programme. C'est couramment utilisé pour créer des bibliothèques partagées.
