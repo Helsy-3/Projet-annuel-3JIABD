@@ -89,7 +89,7 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
         // ADD DISTANCE TO sum_distance
         sum_distance += min_centroid_distance;
     }
-    
+
     double sigma = sum_distance / K;
     return sigma;
 }
@@ -98,6 +98,7 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 void calculer_dot_rbf_closeness_to_centroids(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
     for (int centroid = 0; centroid < K; centroid++){ 
         double distance_carre = 0;
+        
         for (int dimension = 0; dimension < dataset_columns; dimension++){
             double difference = dot[dimension] - centroids_array[centroid][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
             distance_carre += difference * difference;
