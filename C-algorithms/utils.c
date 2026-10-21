@@ -49,13 +49,13 @@ min_distance = distance;
 return closest_centroid;
 }
 
-// la fonction rbf_distance renvoie une valeur de proximité, pas une valeur géométrique
+// rbf_distance renvoie une valeur de proximité, pas une valeur géométrique
 // Plus la distance est petite, plus la valeur de rbf_distance() est grande.
 double rbf_distance(double distance, double sigma){
     return exp(-(distance * distance)/ (2.0 * sigma * sigma));
 }
 
-// cette fonction multiplie chaque valeur de proximité du point au centroide par un poids, puis additionne tous les résultats.
+// multiplie chaque valeur de proximité du point au centroide par un poids, puis additionne tous les résultats.
 // Les poids indiquent l'importance que le réseau accorde à chaque valeur de proximité pour calculer sa prédiction.
 double calculer_dot_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
     double dot_output = 0.0;

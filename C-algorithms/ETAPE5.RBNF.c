@@ -101,18 +101,17 @@ void calculer_dot_rbf_closeness_to_centroids(int dataset_columns, double dot[dat
 }
 
 // ETAPE 6 : Entrainer les poids rétro-activement
-// La fonction train_weights() va modifier ces poids petit à petit pour que le réseau fasse de meilleures prédictions.
 void recursive_train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs){
     double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
-        for (int i = 0; i < dataset_rows; i++){ // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
+        for (int i = 0; i < dataset_rows; i++) { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
             calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
             total_error += error * error;
-            for (int j = 0; j < K; j++){
-                weights[j] += learning_rate * error * dot_proximity_to_centroids[j];
+            for (int centroid = 0; centroid < K; centroid++){
+                weights[centroid] += learning_rate * error * dot_proximity_to_centroids[j];
             }
         }
         double mse = total_error / dataset_rows; // Erreur moyenne
