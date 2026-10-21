@@ -45,8 +45,13 @@ lib = ctypes.CDLL(os.path.join(DOSSIER, NOM_LIB))
 P_DOUBLE = ctypes.POINTER(ctypes.c_double)
 P_INT = ctypes.POINTER(ctypes.c_int)
 
+# Chacune de ces fonctions est un morceau de l'algorithme RBF (ecrit en C) qu'on appelle
+# depuis Python dans le bon ordre - RBNF() en C fait exactement la meme sequence, mais
+# ne renvoie rien a Python, donc on la reconstruit nous-memes ici.
+
+# ETAPE 1/2 du k-means : choisir des centroides de depart, puis les stabiliser
 lib.find_centroids.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE]
-lib.find_centroids.restype = None
+lib.find_centroids.restype = None  # void en C -> None cote ctypes
 
 lib.assign_clusters.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_INT, P_INT]
 lib.assign_clusters.restype = None
@@ -54,20 +59,25 @@ lib.assign_clusters.restype = None
 lib.update_centroids_mean.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
 lib.update_centroids_mean.restype = None
 
+# ETAPE 3 : sigma = largeur des gaussiennes (distance moyenne entre les centroides)
 lib.calculer_sigma.argtypes = [ctypes.c_int, ctypes.c_int, P_DOUBLE]
 lib.calculer_sigma.restype = ctypes.c_double
 
+# ETAPE 4 : pour un point donne, sa "proximite" (activation RBF) a chaque centroide
 lib.calculer_rbf_closeness_to_centroid.argtypes = [ctypes.c_int, P_DOUBLE, ctypes.c_int, P_DOUBLE,
                                                     ctypes.c_double, P_DOUBLE]
 lib.calculer_rbf_closeness_to_centroid.restype = None
 
+# ETAPE 5 : apprend les poids (un par centroide) par descente de gradient
 lib.train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
                                ctypes.c_double, P_DOUBLE, ctypes.c_double, ctypes.c_int]
 lib.train_weights.restype = None
 
+# ETAPE 6 : prediction finale = somme ponderee des proximites (voir calculer_rbf_closeness_to_centroid)
 lib.calculer_output.argtypes = [ctypes.c_int, P_DOUBLE, P_DOUBLE]
 lib.calculer_output.restype = ctypes.c_double
 
+# Sauvegarde/chargement : centroides + sigma + poids dans un fichier texte simple
 lib.rbf_sauvegarder.argtypes = [ctypes.c_char_p, P_DOUBLE, ctypes.c_double, P_DOUBLE, ctypes.c_int, ctypes.c_int]
 lib.rbf_sauvegarder.restype = ctypes.c_int
 lib.rbf_charger.argtypes = [ctypes.c_char_p, P_DOUBLE, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
@@ -277,6 +287,10 @@ def main():
     print("=== RBF Network sur les 6 cas de tests officiels ===")
     print("(le RBF gere les frontieres non lineaires, contrairement au perceptron lineaire)\n")
 
+    # k = nombre de centroides choisi a la main pour chaque cas : il faut assez de
+    # centroides pour "couvrir" la forme de la frontiere (plus une frontiere est
+    # decoupee/complexe, plus il en faut), mais pas trop par rapport au nombre de
+    # points sinon le modele risque le sur-apprentissage (voir le README).
     fig, axes = plt.subplots(2, 3, figsize=(13, 8))
     cas = [
         ("Linear Simple", (np.array([[1, 1], [2, 3], [3, 3]], dtype=float), np.array([1, -1, -1])), RBF(k=2)),
@@ -303,6 +317,9 @@ def main():
     fig.savefig(chemin, dpi=110)
     print(f"\nFigure enregistree : {chemin}")
 
+    # Deuxieme partie : meme principe, mais sur de vraies photos au lieu de points 2D.
+    # On separe les photos en train/test AVANT d'entrainer, pour mesurer si le modele
+    # generalise a des photos qu'il n'a jamais vues (pas juste s'il les a apprises par coeur).
     print("\n=== Dataset reel (photos de dechets) ===")
     chemins_plastic = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "plastic"))
     chemins_verre = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "verre"))

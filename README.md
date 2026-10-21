@@ -214,6 +214,39 @@ Pendant les tests, on a trouvé un vrai bug numérique dans le k-means partagé 
 
 Enfin, un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste une limite connue du RBF tel qu'il est implémenté ici : le sigma (largeur des gaussiennes) est une seule valeur globale, calculée comme la distance moyenne entre tous les centroïdes - trop grossière pour distinguer les bandes fines de ce damier, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500, sans amélioration). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
 
+# Sous-apprentissage, sur-apprentissage et biais du dataset
+
+Le sujet demande de montrer, avec des courbes, des phénomènes vus en cours : le sous-apprentissage, le sur-apprentissage, le biais dans le dataset, et la difficulté de trouver un modèle "ni trop simple, ni trop complexe". On explique ici ce qu'on a fait pour chacun, en gardant les choses simples (script `C-algorithms/test_sous_sur_apprentissage.py`).
+
+## Sous-apprentissage et sur-apprentissage : courbe de complexité
+
+Jusqu'ici, on affichait juste une précision finale (entraînement vs test). Mais ça ne montre pas *pourquoi* un modèle est trop simple ou trop compliqué. Pour ça, il faut faire varier la complexité du modèle et regarder comment la précision évolue :
+
+- **Perceptron** : sa complexité est fixe (un seul neurone), donc on ne peut rien faire varier - on observe juste qu'il plafonne plus bas que les autres modèles, quel que soit le nombre d'epochs.
+- **PMC** : on fait varier `h_dim`, la taille de la couche cachée (1, 2, 4, 8, 16, 32 neurones).
+- **SVM** : on fait varier `gamma`, la largeur du noyau RBF.
+- **RBF Network** : on fait varier `K`, le nombre de centroïdes.
+
+Pour chaque valeur, on entraîne **uniquement sur les photos d'entraînement**, puis on calcule la précision à la fois sur l'entraînement et sur le test (jamais vu). On observe sur `test_sous_sur_apprentissage.png` :
+
+- **Trop simple** (PMC avec 1 seul neurone caché, par exemple) : précision basse sur l'entraînement ET le test (~20%/17%) - c'est le sous-apprentissage, le modèle n'a tout simplement pas assez de "capacité" pour apprendre le problème.
+- **Trop complexe** (SVM avec gamma élevé, RBF avec beaucoup de centroïdes) : la précision d'entraînement grimpe (jusqu'à 100% pour le SVM) pendant que celle de test stagne ou redescend - c'est le sur-apprentissage, le modèle "apprend par cœur" les photos d'entraînement au lieu d'une règle générale.
+- Entre les deux se trouve un "bon" compromis (ex: PMC avec `h_dim=4`, SVM avec un petit `gamma`).
+
+## Biais dans le dataset : l'ordre des photos compte
+
+En construisant la courbe du perceptron, on a remarqué un résultat bizarre : avec très peu d'epochs, il prédisait "métal" pour quasiment toutes les photos, peu importe leur vraie classe. En creusant, on a compris pourquoi : nos photos sont rangées **par classe** dans les dossiers (tout le plastique, puis tout le verre, puis tout le métal), et le perceptron apprend **point par point, dans l'ordre d'arrivée**. Avec peu d'epochs, il n'a pas le temps de "digérer" toutes les classes correctement - les derniers points qu'il voit (le métal, dernier dans l'ordre) ont une influence disproportionnée sur le résultat final.
+
+C'est un exemple concret de biais introduit par l'organisation du dataset, pas par l'algorithme. La correction est simple : **mélanger** les photos avant l'entraînement (une pratique standard). Le graphique `test_biais_donnees.png` compare les deux : sans mélange, la précision reste très mauvaise (~6%) pendant longtemps ; avec mélange, elle est bonne (65-82%) dès la première epoch.
+
+## Courbes d'apprentissage : précision au fil des epochs
+
+En plus des courbes de complexité, on trace aussi des courbes d'apprentissage classiques : cette fois la complexité du modèle est **fixe**, et on regarde comment la précision évolue au fil des epochs d'entraînement (`test_courbes_apprentissage.png`) :
+
+- **SVM** : monte progressivement de ~5% (quasi pas entraîné) à 98%/82%, puis reste stable - une courbe de convergence classique et propre.
+- **RBF** : converge très vite (dès une dizaine d'epochs) et reste stable ensuite.
+- **PMC** : un résultat plus surprenant - la précision monte bien jusqu'à 100%/100% vers 500-1000 epochs, mais **s'effondre à 55%/53% à 5000 epochs** avant de remonter partiellement à 10000. Ce n'est pas un bug : le taux d'apprentissage du PMC est fixé en dur à 0.05 dans le C, sans aucune diminution au fil du temps. Avec trop d'epochs, les mises à jour des poids finissent par "dépasser" l'optimum trouvé et le réseau devient instable avant de se re-stabiliser partiellement. C'est un exemple concret du problème classique "un taux d'apprentissage trop grand pour un entraînement trop long".
+
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 
 

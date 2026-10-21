@@ -129,7 +129,7 @@ void retropropager(double *pixel_array, int classe_attendue, double learning_rat
 // alloues par Python : on y recopie les poids appris, pour que Python puisse les reutiliser
 // ensuite avec predire_pmc() sur des donnees jamais vues pendant l'entrainement (split train/test).
 int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
-                    int in_dim, int h_dim, int out_dim,
+                    int in_dim, int h_dim, int out_dim, int epochs,
                     double *W1_sortie, double *b1_sortie, double *W2_sortie, double *b2_sortie) {
 
     srand(42);
@@ -144,7 +144,6 @@ int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
     init_poids(W2, h_dim * out_dim);
     init_biais(b2, out_dim);
 
-    int epochs = 10000;
     double lr = 0.05;
 
     for (int e = 0; e < epochs; e++) {
@@ -247,7 +246,7 @@ int main(void) {
     int vraies_classes[3] = {2, 0, 1};
 
     double W1[12 * 8], b1[8], W2[8 * 3], b2[3];
-    int bonnes = run_pmc_dataset((double*)X, vraies_classes, n_exemples, in_dim, h_dim, out_dim,
+    int bonnes = run_pmc_dataset((double*)X, vraies_classes, n_exemples, in_dim, h_dim, out_dim, 10000,
                                   W1, b1, W2, b2);
 
     printf("Bonnes predictions : %d/%d\n", bonnes, n_exemples);
