@@ -31,7 +31,7 @@ euclidean_distance(
  dataset_columns
  );
 
- for (int i =0; i < K; i++)
+ for (int i = 0; i < K; i++)
  {
  double distance =
  euclidean_distance(

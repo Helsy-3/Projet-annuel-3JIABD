@@ -18,17 +18,16 @@ void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset
     }
 }
 
-// ETAPE 2 : Assigner les points du dataset au centroïde le plus proche.
-// en calculant la distance euclidienne de chaque point à chacun des centroïdes.
+// ETAPE 2 : Assigner les points du dataset au centroïde le plus proche en calculant la distance euclidienne de chaque point à chacun des centroïdes.
 void assign_clusters(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K]){
     for (int i = 0; i < K; i++){
         cluster_sizes[i] = 0;
     }
     for (int i = 0; i < dataset_rows; i++){
-        int closest_centroid = calculer_closest_centroid(dataset_array[i], K, dataset_columns, centroids_array);
-        int position = cluster_sizes[closest_centroid]; // On regarde combien de points sont déjà dans ce cluster
-        clusters_array[closest_centroid][position] = i; // On ajoute le point au cluster
-        cluster_sizes[closest_centroid]++;              // Le cluster contient maintenant un point de plus
+        int closest_centroid_index = calculer_closest_centroid(dataset_array[i], K, dataset_columns, centroids_array);
+        int cluster_dot_index = cluster_sizes[closest_centroid_index]; // On regarde combien de points sont déjà dans ce cluster
+        clusters_array[closest_centroid_index][cluster_dot_index] = i; // On ajoute le point au cluster
+        cluster_sizes[closest_centroid_index]++;              // Le cluster contient maintenant un point de plus
     }
 }
 
