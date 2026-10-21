@@ -2,56 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "utils.h"
 
-void init_poids(double *poids, int taille)
-{
-    for (int i = 0; i < taille; i++)
-    {
-        poids[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
-    }
-}
-
-void init_biais(double *biais, int taille)
-{
-    for (int i = 0; i < taille; i++)
-    {
+void init_biais(double *biais, int taille){
+    for (int i = 0; i < taille; i++){
         biais[i] = 0.0;
-    }
-}
-
-void calculer_sortie_reseau(double *pixel_array, double *hidden_layer, double *output_layer,
-             double *W1, double *bias_layer_1, double *W2, double *bias_layer_2,
-             int pixel_array_length, int hidden_layer_length, int output_length)
-{
-
-    // calcul de la couche cachée
-    for (int i = 0; i < hidden_layer_length; i++)
-    {
-        hidden_layer[i] = bias_layer_1[i];
-        for (int j = 0; j < pixel_array_length; j++)
-        {
-            hidden_layer[i] += pixel_array[j] * W1[j * hidden_layer_length + i];
-        }
-    }
-
-    // calcul de la couche de sortie
-    for(int i = 0; i < output_length; i++)
-    {
-        output_layer[i] = bias_layer_2[i];
-        for( int j = 0; j < hidden_layer_length ; j++)
-        {
-            output_layer[i] += hidden_layer[j] * W2[j * output_length + i];
-        }
-    }
-
-    // conversion en probabilités (softmax : il faut exponentier avant de diviser par la somme)
-    double somme = 0.0;
-    for(int j = 0; j < output_length; j++){
-        output_layer[j] = exp(output_layer[j]);
-        somme += output_layer[j];
-    }
-    for(int j = 0; j < output_length; j++){
-        output_layer[j] = output_layer[j] / somme;
     }
 }
 
@@ -66,60 +21,6 @@ int predire(double *output, int output_length) {
     return meilleur;
 }
 
-// Rétropropagation 
-void retropropager(double *pixel_array, int classe_attendue, double learning_rate,
-                   double *W1, double *b1, double *W2, double *b2,
-                   int pixel_array_length, int hidden_layer_length, int output_length) {
-    
-    double *hidden_layer = malloc(hidden_layer_length * sizeof(double));
-    double *output = malloc(output_length * sizeof(double));
-    calculer_sortie_reseau(pixel_array, hidden_layer, output, W1, b1, W2, b2, pixel_array_length, hidden_layer_length, output_length);
-
-    double *cible = calloc(output_length, sizeof(double));
-    cible[classe_attendue] = 1.0;
-
-    // rétropropagation: on part de la couche 2 et on avance vers la couche 1
-    double *derivée_couche_2 = malloc(output_length * sizeof(double)); // erreur couche 2
-    for (int j = 0; j < output_length; j++) {
-        derivée_couche_2[j] = output[j] - cible[j]; // on calcule la dérivée de la couche 2
-    }
-
-    // Erreur couche cachée : la dérivée de f(x)=x est 1, donc pas de multiplication par relu_deriv
-    double *derivée_couche_1 = malloc(hidden_layer_length * sizeof(double)); // erreur couche 1
-    for (int i = 0; i < hidden_layer_length; i++) {
-        double somme = 0.0;
-        for (int j = 0; j < output_length; j++) {
-            somme += derivée_couche_2[j] * W2[i * output_length + j];
-        }
-        derivée_couche_1[i] = somme; // 
-    }
-
-    // Mise à jour Weight Couche 2 et biais Couche 2
-    for (int i = 0; i < hidden_layer_length; i++) {
-        for (int j = 0; j < output_length; j++) {
-            W2[i * output_length + j] -= learning_rate * derivée_couche_2[j] * hidden_layer[i];
-        }
-    }
-    for (int j = 0; j < output_length; j++) {
-        b2[j] -= learning_rate * derivée_couche_2[j];
-    }
-
-    // Mise à jour W1 et b1
-    for (int i = 0; i < pixel_array_length; i++) {
-        for (int j = 0; j < hidden_layer_length; j++) {
-            W1[i * hidden_layer_length + j] -= learning_rate * derivée_couche_1[j] * pixel_array[i];
-        }
-    }
-    for (int j = 0; j < hidden_layer_length; j++) {
-        b1[j] -= learning_rate * derivée_couche_1[j];
-    }
-
-    free(hidden_layer);
-    free(output);
-    free(cible);
-    free(derivée_couche_2);
-    free(derivée_couche_1);
-}
 
 // Entraine le reseau sur des donnees envoyees depuis Python (vraies photos du dataset)
 // vecteurs : n_exemples * IN valeurs a la suite (chaque exemple = IN valeurs)
@@ -128,26 +29,81 @@ void retropropager(double *pixel_array, int classe_attendue, double learning_rat
 // Entraînement complet. W1_sortie/b1_sortie/W2_sortie/b2_sortie sont des tableaux deja
 // alloues par Python : on y recopie les poids appris, pour que Python puisse les reutiliser
 // ensuite avec predire_pmc() sur des donnees jamais vues pendant l'entrainement (split train/test).
-int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
-                    int in_dim, int h_dim, int out_dim,
-                    double *W1_sortie, double *b1_sortie, double *W2_sortie, double *b2_sortie) {
 
-    srand(42);
+int init_couches_cachees(int nb_couches, int nb_neurones_par_couches[]){
+    double *hidden_neurones_by_layer_array;
 
-    double *W1 = malloc(in_dim * h_dim * sizeof(double));
-    double *b1 = malloc(h_dim * sizeof(double));
-    double *W2 = malloc(h_dim * out_dim * sizeof(double));
-    double *b2 = malloc(out_dim * sizeof(double));
+    for(int couche = 0; couche < nb_couches; couche ++){
+        double hidden_layer = malloc(nb_neurones_par_couches[couche] * sizeof(double));
+        hidden_neurones_by_layer_array[couche] = hidden_layer;
+    }
+}
 
-    init_poids(W1, in_dim * h_dim);
-    init_biais(b1, h_dim);
-    init_poids(W2, h_dim * out_dim);
-    init_biais(b2, out_dim);
+int init_weights_by_hidden_layers(int nb_couches, int nb_neurones_par_couche, double **couches_cachees_array[nb_couches][nb_neurones_par_couche]){
+    double poids_par_couche[nb_couches][nb_neurones_par_couche]; 
 
-    int epochs = 10000;
-    double lr = 0.05;
+    for (int couche_index = 1; couche_index < nb_couches; couche_index++){
+        int nb_neurones_current_layer = couches_cachees_array[couche_index];
+        double *weights = malloc(nb_neurones_current_layer * sizeof(double));
+        double biais_couche[nb_neurones_current_layer];
+        init_poids(weights, nb_neurones_current_layer);
+        init_biais(biais_couche, nb_neurones_current_layer);
+        **couches_cachees_array[couche_index] = weights;
+    }
+}
 
-    for (int e = 0; e < epochs; e++) {
+
+void calculer_layer_output(int layer_before_length, int current_layer_length, double *current_layer_neurones, double *neurone_layer_before, double *output_layer, double *before_layer_weight, double *before_layer_bias) {
+    
+    // Calcul de la couche actuelle (couche cachée)
+    for (int neurone_index = 0; neurone_index < current_layer_length; neurone_index++) {
+        
+        double current_neurone_output = before_layer_bias[neurone_index];
+        current_layer_neurones[neurone_index] = before_layer_bias[neurone_index];
+        
+        // calculer neurone output (layer[1] * w[1] + layer[2] * w[2] + layer[3] * w[3], etc...)
+        double output = 0.0;
+        for(int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index ++){
+            current_neurone_output+= neurone_layer_before[neurone_before_index] * before_layer_weight[neurone_before_index];
+        }
+        current_layer_neurones[neurone_index] = current_neurone_output;
+    }
+}
+
+
+// Rétropropagation 
+void backpropagation(double *neurones_by_layer_array, int neurone_length, int nb_couches, int nb_neurones_par_couches[], int weights[], int bias_array[]) {
+    
+    for(int couche_index = 1; couche_index < nb_couches; couche_index ++){
+        
+        double *neurone_layer_before =  &neurones_by_layer_array[couche_index -1];
+        double *before_layer_weight = weights[couche_index -1];
+        double *before_layer_bias = bias_array[couche_index -1];
+        int neurone_layer_before_length = sizeof(&neurones_by_layer_array[couche_index-1]) / sizeof(neurone_length);
+        double *current_neurones_layer = &neurones_by_layer_array[couche_index];
+        int current_layer_length = nb_neurones_par_couches[couche_index];
+        double *output_layer = malloc(current_layer_length * sizeof(double));
+        calculer_layer_output(neurone_layer_before_length, current_layer_length, current_neurones_layer, neurone_layer_before, output_layer, before_layer_weight, before_layer_bias);
+        
+        double *expected_target = calloc(current_layer_length, sizeof(double));
+        double derivee_current_couche = malloc(current_layer_length * sizeof(double));
+        for (int i = 0; i < current_layer_length; i++){
+            derivee_current_couche = output_layer[i] - expected_target[i];
+        }
+    }
+
+}
+
+int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples, int in_dim, int h_dim, int out_dim, int nb_couches, int nb_neurones_par_couche[], double *couches_cachees[nb_couches][nb_neurones_par_couche], int epochs, int learning_rate, int seed) {
+    srand(seed);
+
+    // step 1: initialiser le tableau de couches cachées avec les neurones
+    init_couches_cachees(nb_couches, nb_neurones_par_couche);
+
+    // step 2: initialiser le nombre de poids par couches cachées. 
+    init_weights_by_hidden_layers(nb_couches, nb_neurones_par_couche, *couches_cachees);
+
+    for (int epoch = 0; epoch < epochs; epoch ++) {
         for (int n = 0; n < n_exemples; n++) {
             retropropager(&vecteurs[n * in_dim], classes[n], lr,
                           W1, b1, W2, b2, in_dim, h_dim, out_dim);
@@ -164,16 +120,6 @@ int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
             bonnes_predictions++;
         }
     }
-
-    memcpy(W1_sortie, W1, in_dim * h_dim * sizeof(double));
-    memcpy(b1_sortie, b1, h_dim * sizeof(double));
-    memcpy(W2_sortie, W2, h_dim * out_dim * sizeof(double));
-    memcpy(b2_sortie, b2, out_dim * sizeof(double));
-
-    free(W1); free(b1);
-    free(W2); free(b2);
-    free(h);  free(out);
-
     return bonnes_predictions;
 }
 

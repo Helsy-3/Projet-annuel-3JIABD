@@ -1,6 +1,8 @@
 #ifndef DISTANCE_H
 #define DISTANCE_H
 
+void init_pmc_poids(double *weight_array, int weight_array_length);
+
 double euclidean_distance(
 double *dot,
 double *centroid,
