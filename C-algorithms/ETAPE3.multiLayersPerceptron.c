@@ -94,32 +94,86 @@ void backpropagation(double *neurones_by_layer_array, int neurone_length, int nb
 
 }
 
-int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples, int in_dim, int h_dim, int out_dim, int nb_couches, int nb_neurones_par_couche[], double *couches_cachees[nb_couches][nb_neurones_par_couche], int epochs, int learning_rate, int seed) {
-    srand(seed);
 
-    // step 1: initialiser le tableau de couches cachées avec les neurones
-    init_couches_cachees(nb_couches, nb_neurones_par_couche);
+int run_pmc_dataset(double *neurones_layers_array, int *categories, int n_exemples, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases, int epochs, double learning_rate) {
+    
+    // Vérifier les paramètres
+    if (neurones_layers_array == NULL ||
+        categories == NULL ||
+        nb_neurones_par_couches == NULL ||
+        weights == NULL ||
+        biases == NULL ||
+        n_exemples <= 0 ||
+        nb_couches < 2) {
+        return -1;
+    }
 
-    // step 2: initialiser le nombre de poids par couches cachées. 
-    init_weights_by_hidden_layers(nb_couches, nb_neurones_par_couche, *couches_cachees);
+    // Étape 1 : initialiser les poids et les biais de chaque connexion
+    for (int couche_index = 0; couche_index < nb_couches - 1; couche_index++) {
+        int nb_neurones_before = nb_neurones_par_couches[couche_index];
+        int nb_neurones_current = nb_neurones_par_couches[couche_index + 1];
+        if (nb_neurones_before <= 0 || nb_neurones_current <= 0) {
+            return -1;
+        }
 
-    for (int epoch = 0; epoch < epochs; epoch ++) {
-        for (int n = 0; n < n_exemples; n++) {
-            retropropager(&vecteurs[n * in_dim], classes[n], lr,
-                          W1, b1, W2, b2, in_dim, h_dim, out_dim);
+        int nb_poids = nb_neurones_before * nb_neurones_current;
+        init_poids(weights[couche_index], nb_poids);
+        init_biais(biases[couche_index], nb_neurones_current);
+    }
+
+
+    // Étape 2 : fill neurones couches array
+    double **neurones_by_layer_array = malloc(nb_couches * sizeof(double *));
+
+    if (neurones_by_layer_array == NULL) {
+        return -1;
+    }
+
+    for (int couche_index = 0; couche_index < nb_couches; couche_index++) {
+        int nb_neurones = nb_neurones_par_couches[couche_index];
+        neurones_by_layer_array[couche_index] = malloc(nb_neurones * sizeof(double));
+        if (neurones_by_layer_array[couche_index] == NULL) {
+            for (int j = 0; j < couche_index; j++) {
+                free(neurones_by_layer_array[j]);
+            }
+            free(neurones_by_layer_array);
+            return -1;
         }
     }
 
+    // Étape 3 : parcourir le dataset
     int bonnes_predictions = 0;
-    double *h = malloc(h_dim * sizeof(double));
-    double *out = malloc(out_dim * sizeof(double));
 
     for (int n = 0; n < n_exemples; n++) {
-        calculer_sortie_reseau(&vecteurs[n * in_dim], h, out, W1, b1, W2, b2, in_dim, h_dim, out_dim);
-        if (predire(out, out_dim) == classes[n]) {
+
+        // Copier les entrées de l'exemple dans la couche d'entrée
+        for (int i = 0; i < nb_neurones_par_couches[0]; i++) {
+            neurones_by_layer_array[0][i] = neurones_layers_array[n * nb_neurones_par_couches[0] + i];
+        }
+
+        // Propagation avant : parcourir toutes les couches suivantes
+        for (int couche_index = 1; couche_index < nb_couches; couche_index++) {
+            int layer_before_length = nb_neurones_par_couches[couche_index - 1];
+            int current_layer_length = nb_neurones_par_couches[couche_index];
+            calculer_layer_output(layer_before_length, current_layer_length, neurones_by_layer_array[couche_index], neurones_by_layer_array[couche_index - 1], NULL, weights[couche_index - 1], biases[couche_index - 1]);
+        }
+
+        // La dernière couche contient les sorties du réseau
+        double *output_layer = neurones_by_layer_array[nb_couches - 1];
+        int output_length = nb_neurones_par_couches[nb_couches - 1];
+
+        if (predire(output_layer, output_length) == categories[n]) {
             bonnes_predictions++;
         }
     }
+
+    // Étape 4 : libérer la mémoire
+    for (int couche_index = 0; couche_index < nb_couches; couche_index++) {
+        free(neurones_by_layer_array[couche_index]);
+    }
+
+    free(neurones_by_layer_array);
+
     return bonnes_predictions;
 }
 
