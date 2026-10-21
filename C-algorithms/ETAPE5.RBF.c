@@ -106,12 +106,12 @@ void recursive_train_weights(int K, int dataset_rows, int dataset_columns, doubl
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
         for (int i = 0; i < dataset_rows; i++) { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
-            calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+            calculer_dot_rbf_closeness_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
             total_error += error * error;
             for (int centroid = 0; centroid < K; centroid++){
-                weights[centroid] += learning_rate * error * dot_proximity_to_centroids[j];
+                weights[centroid] += learning_rate * error * dot_proximity_to_centroids[centroid];
             }
         }
         double mse = total_error / dataset_rows; // Erreur moyenne
@@ -119,7 +119,7 @@ void recursive_train_weights(int K, int dataset_rows, int dataset_columns, doubl
     }
 }
 
-void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], int cluster_size){
+void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], int cluster_size){
     size_t dataset_size = dataset_rows;
 
     // COUCHE 1
@@ -146,7 +146,6 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
         update_centroids(K, dataset_rows, dataset_columns, dataset_array, clusters_array, cluster_sizes, centroids_array);
     }
 
-
     // step 3: RBF
 
     // Calcul de sigma
@@ -160,7 +159,7 @@ void RBNF(int dataset_rows, int dataset_columns, double dataset_array[dataset_ro
     double dot_proximity_to_centroids[K]; //ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
     printf("\nResultats :\n");
     for (int i = 0; i < dataset_rows; i++){
-        calculer_rbf_closeness_to_centroid(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+        calculer_dot_rbf_closeness_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
         double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
         printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
