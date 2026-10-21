@@ -23,7 +23,9 @@ NOMS_CLASSES = {0: "plastique", 1: "verre", 2: "metal"}
 
 
 def main():
-    dataset_dir = os.path.join(RACINE, "dataset-img")
+    # On entraine seulement sur dataset-img/train/ (pas test/), comme partout ailleurs
+    # dans le projet - voir dataset-img/separer_dataset.py.
+    dataset_dir = os.path.join(RACINE, "dataset-img", "train")
     chemins_plastic = lister_images(os.path.join(dataset_dir, "plastic"))
     chemins_verre = lister_images(os.path.join(dataset_dir, "verre"))
     chemins_metal = lister_images(os.path.join(dataset_dir, "metal"))

@@ -111,19 +111,16 @@ def lister_images(dossier):
     return [os.path.join(dossier, f) for f in sorted(os.listdir(dossier)) if f.lower().endswith(extensions)]
 
 
-def separer_train_test(chemins, classes, proportion_test=0.2, graine=0):
-    """Split stratifie : au moins 1 exemple de test par classe, meme si la classe est petite."""
-    rng_split = np.random.default_rng(graine)
-    chemins = np.array(chemins)
-    train_idx, test_idx = [], []
-    for c in np.unique(classes):
-        idx = np.where(classes == c)[0]
-        rng_split.shuffle(idx)
-        n_test = max(1, round(len(idx) * proportion_test))
-        test_idx.extend(idx[:n_test])
-        train_idx.extend(idx[n_test:])
-    return (chemins[train_idx].tolist(), classes[train_idx],
-            chemins[test_idx].tolist(), classes[test_idx])
+def charger_dataset_reel(sous_dossier):
+    """sous_dossier = 'train' ou 'test' (voir dataset-img/separer_dataset.py, qui a deja
+    separe les photos une fois pour toutes - pas besoin de refaire le split ici)."""
+    base = os.path.join(DOSSIER, "..", "dataset-img", sous_dossier)
+    chemins_plastic = lister_images(os.path.join(base, "plastic"))
+    chemins_verre = lister_images(os.path.join(base, "verre"))
+    chemins_metal = lister_images(os.path.join(base, "metal"))
+    chemins = chemins_plastic + chemins_verre + chemins_metal
+    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
+    return chemins, classes
 
 
 tout_ok = True
@@ -147,13 +144,8 @@ def main():
     verifier(f"Cas de test : {bonnes_test}/3 bonnes predictions", bonnes_test == 3)
 
     print("\n=== Donnees reelles envoyees depuis Python (photos de dechets) ===")
-    chemins_plastic = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "plastic"))
-    chemins_verre = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "verre"))
-    chemins_metal = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "metal"))
-    chemins = chemins_plastic + chemins_verre + chemins_metal
-    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
-
-    chemins_train, classes_train, chemins_test, classes_test = separer_train_test(chemins, classes)
+    chemins_train, classes_train = charger_dataset_reel("train")
+    chemins_test, classes_test = charger_dataset_reel("test")
     vecteurs_train = np.array([image_vers_vecteur(c) for c in chemins_train])
     vecteurs_test = np.array([image_vers_vecteur(c) for c in chemins_test])
 

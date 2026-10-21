@@ -48,13 +48,8 @@ import test_etape5 as e5  # RBF Network (K variable), + helpers dataset reel
 
 
 def charger_dataset_reel():
-    chemins_plastic = e5.lister_images(os.path.join(DOSSIER, "..", "dataset-img", "plastic"))
-    chemins_verre = e5.lister_images(os.path.join(DOSSIER, "..", "dataset-img", "verre"))
-    chemins_metal = e5.lister_images(os.path.join(DOSSIER, "..", "dataset-img", "metal"))
-    chemins = chemins_plastic + chemins_verre + chemins_metal
-    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
-
-    chemins_train, classes_train, chemins_test, classes_test = e5.separer_train_test(chemins, classes)
+    chemins_train, classes_train = e5.charger_dataset_reel("train")
+    chemins_test, classes_test = e5.charger_dataset_reel("test")
     vecteurs_train = np.array([e5.image_vers_vecteur(c) for c in chemins_train], dtype=np.float64)
     vecteurs_test = np.array([e5.image_vers_vecteur(c) for c in chemins_test], dtype=np.float64)
     return vecteurs_train, classes_train, vecteurs_test, classes_test
@@ -141,8 +136,7 @@ def courbe_rbf(X_train, y_train, X_test, y_test):
     valeurs = [2, 4, 6, 10, 15, 25, 40]
     precision_train, precision_test = [], []
     for k in valeurs:
-        with e5.silencieux():
-            modele = e5.RBFMultiClasse(k=k).entrainer(X_train, y_train)
+        modele = e5.RBFMultiClasse(k=k).entrainer(X_train, y_train)
         precision_train.append((modele.predire(X_train) == y_train).mean())
         precision_test.append((modele.predire(X_test) == y_test).mean())
     return valeurs, precision_train, precision_test
@@ -184,8 +178,7 @@ def courbe_apprentissage_rbf(X_train, y_train, X_test, y_test, k=10):
     k = max(2, min(k, n))
 
     modele_ref = e5.RBF(k=k)
-    with e5.silencieux():
-        modele_ref.entrainer(X_train_c, np.where(y_train == y_train[0], 1, -1).astype(float))
+    modele_ref.entrainer(X_train_c, np.where(y_train == y_train[0], 1, -1).astype(float))
     centroids, sigma, k = modele_ref.centroids, modele_ref.sigma, modele_ref.k
 
     classes = np.unique(y_train)
@@ -196,11 +189,10 @@ def courbe_apprentissage_rbf(X_train, y_train, X_test, y_test, k=10):
         for c in classes:
             y_bin = np.where(y_train == c, 1, -1).astype(float)
             poids = np.zeros(k)
-            with e5.silencieux():
-                e5.lib.recursive_train_weights(k, n, d, X_train_c.ctypes.data_as(e5.P_DOUBLE),
-                                     y_bin.ctypes.data_as(e5.P_DOUBLE),
-                                     centroids.ctypes.data_as(e5.P_DOUBLE), sigma,
-                                     poids.ctypes.data_as(e5.P_DOUBLE), 0.01, epochs)
+            e5.lib.recursive_train_weights(k, n, d, X_train_c.ctypes.data_as(e5.P_DOUBLE),
+                                 y_bin.ctypes.data_as(e5.P_DOUBLE),
+                                 centroids.ctypes.data_as(e5.P_DOUBLE), sigma,
+                                 poids.ctypes.data_as(e5.P_DOUBLE), 0.01, epochs)
             m = e5.RBF(k=k)
             m.k, m.centroids, m.sigma, m.poids = k, centroids, sigma, poids
             modeles.append(m)

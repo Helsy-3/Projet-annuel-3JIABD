@@ -16,7 +16,6 @@ Utilisation :
     python C-algorithms/test_etape5.py
 """
 
-import contextlib
 import ctypes
 import os
 import sys
@@ -24,19 +23,6 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-
-
-@contextlib.contextmanager
-def silencieux():
-    """Redirige temporairement la sortie console (y compris les printf() du C) vers /dev/null."""
-    stdout_original = os.dup(1)
-    with open(os.devnull, "w") as trou_noir:
-        os.dup2(trou_noir.fileno(), 1)
-        try:
-            yield
-        finally:
-            os.dup2(stdout_original, 1)
-            os.close(stdout_original)
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 NOM_LIB = "ETAPE5.RBNF.dll" if sys.platform.startswith("win") else "ETAPE5.RBNF.so"
@@ -126,10 +112,10 @@ class RBF:
                     continue
                 sigma = lib.calculer_sigma(k, d, centroids.ctypes.data_as(P_DOUBLE))
                 poids = np.zeros(k)
-                with silencieux():  # train_weights fait un printf() par epoch, on l'etouffe
-                    lib.recursive_train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
-                                       centroids.ctypes.data_as(P_DOUBLE), sigma,
-                                       poids.ctypes.data_as(P_DOUBLE), self.learning_rate, self.epochs)
+                # recursive_train_weights affiche un printf() par epoch (MSE) dans la console - normal.
+                lib.recursive_train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
+                                   centroids.ctypes.data_as(P_DOUBLE), sigma,
+                                   poids.ctypes.data_as(P_DOUBLE), self.learning_rate, self.epochs)
                 self.k, self.centroids, self.sigma, self.poids = k, centroids, sigma, poids
                 precision = (self.predire(X) == y).mean()
                 if precision > meilleure_precision:
@@ -249,19 +235,16 @@ def lister_images(dossier):
     return [os.path.join(dossier, f) for f in sorted(os.listdir(dossier)) if f.lower().endswith(extensions)]
 
 
-def separer_train_test(chemins, classes, proportion_test=0.2, graine=0):
-    """Split stratifie : au moins 1 exemple de test par classe, meme si la classe est petite."""
-    rng_split = np.random.default_rng(graine)
-    chemins = np.array(chemins)
-    train_idx, test_idx = [], []
-    for c in np.unique(classes):
-        idx = np.where(classes == c)[0]
-        rng_split.shuffle(idx)
-        n_test = max(1, round(len(idx) * proportion_test))
-        test_idx.extend(idx[:n_test])
-        train_idx.extend(idx[n_test:])
-    return (chemins[train_idx].tolist(), classes[train_idx],
-            chemins[test_idx].tolist(), classes[test_idx])
+def charger_dataset_reel(sous_dossier):
+    """sous_dossier = 'train' ou 'test' (voir dataset-img/separer_dataset.py, qui a deja
+    separe les photos une fois pour toutes - pas besoin de refaire le split ici)."""
+    base = os.path.join(DOSSIER, "..", "dataset-img", sous_dossier)
+    chemins_plastic = lister_images(os.path.join(base, "plastic"))
+    chemins_verre = lister_images(os.path.join(base, "verre"))
+    chemins_metal = lister_images(os.path.join(base, "metal"))
+    chemins = chemins_plastic + chemins_verre + chemins_metal
+    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
+    return chemins, classes
 
 
 tout_ok = True
@@ -321,13 +304,8 @@ def main():
     # On separe les photos en train/test AVANT d'entrainer, pour mesurer si le modele
     # generalise a des photos qu'il n'a jamais vues (pas juste s'il les a apprises par coeur).
     print("\n=== Dataset reel (photos de dechets) ===")
-    chemins_plastic = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "plastic"))
-    chemins_verre = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "verre"))
-    chemins_metal = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "metal"))
-    chemins = chemins_plastic + chemins_verre + chemins_metal
-    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
-
-    chemins_train, classes_train, chemins_test, classes_test = separer_train_test(chemins, classes)
+    chemins_train, classes_train = charger_dataset_reel("train")
+    chemins_test, classes_test = charger_dataset_reel("test")
     vecteurs_train = np.array([image_vers_vecteur(c) for c in chemins_train])
     vecteurs_test = np.array([image_vers_vecteur(c) for c in chemins_test])
 

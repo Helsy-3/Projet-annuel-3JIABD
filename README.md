@@ -145,11 +145,13 @@ erreurs = lib_etape1.run_perceptron_dataset(vecteurs_c, labels_c, len(labels))
 
 Au début, chaque modèle était entraîné et évalué sur exactement les mêmes photos - donc la précision affichée ne disait rien de plus que "le modèle a-t-il appris ces photos par cœur", pas "est-ce qu'il reconnaîtrait une photo jamais vue". On a donc ajouté une vraie séparation entraînement/test (80%/20%, au moins 1 photo de test par catégorie même quand une catégorie est petite) pour le Perceptron (étape 1) et le RBF (étape 5) : on entraîne sur ~80% des photos, puis on mesure la précision sur les ~20% restantes, jamais vues pendant l'entraînement.
 
+Ce split est maintenant **physique**, pas juste calculé en mémoire à chaque script : les photos sont rangées une fois pour toutes dans `dataset-img/train/<categorie>/` et `dataset-img/test/<categorie>/`. Tous les scripts (et le notebook) lisent directement ces deux dossiers - une seule source de vérité, plus simple à vérifier à l'œil (on peut ouvrir le dossier `test/` et voir exactement quelles photos n'ont jamais servi à l'entraînement).
+
 Au départ, cette séparation n'était pas possible pour le PMC (étape 3) : `run_pmc_dataset()` entraînait un réseau tout neuf et l'évaluait immédiatement sur le même tableau, en une seule fonction, puis libérait (`free()`) les poids appris avant de retourner - Python ne récupérait jamais le réseau entraîné pour le réutiliser sur d'autres données. On a corrigé ça en modifiant `run_pmc_dataset()` pour qu'elle recopie les poids appris (W1, b1, W2, b2) dans des tableaux fournis par Python avant de les libérer, et en ajoutant une nouvelle fonction `predire_pmc()` qui prédit la classe d'un exemple à partir de poids déjà entraînés, sans ré-entraîner. Ça permet maintenant d'entraîner sur les photos d'entraînement puis de prédire sur les photos de test avec les mêmes poids, comme pour le Perceptron et le RBF.
 
 Résultats actuels (82 photos : 10 plastique, 68 verre, 4 métal - un jeu provisoire, le dataset complet de 1000 photos/catégorie d'Helsy n'est pas encore intégré) :
-- Modèle linéaire (étape 1, plastique vs métal) : 55% en entraînement, 67% en test - le modèle linéaire peine sur de vraies photos, cohérent avec sa limite déjà démontrée sur les cas non linéaires (XOR, Cross)
-- PMC (étape 3) : 88% en entraînement, 76% en test
+- Modèle linéaire (étape 1, plastique vs métal) : 73% en entraînement, 67% en test - le modèle linéaire peine sur de vraies photos, cohérent avec sa limite déjà démontrée sur les cas non linéaires (XOR, Cross)
+- PMC (étape 3) : 89% en entraînement, 82% en test
 - RBF (étape 5) : 88% en entraînement, 94% en test
 
 ## Sauvegarde et chargement des modèles
@@ -221,7 +223,7 @@ Pendant les tests, on avait trouvé un vrai bug numérique dans ce k-means : si 
 
 Le calcul de `calculer_sigma` a aussi été amélioré : au lieu de la distance moyenne entre **toutes les paires** de centroïdes, c'est maintenant la distance moyenne de chaque centroïde à son **voisin le plus proche** - un sigma plus localisé, qui a amélioré la précision sur plusieurs cas de test (ex: Cross est passé de 78% à 95%).
 
-Un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste malgré tout une limite connue du RBF tel qu'il est implémenté ici : le sigma reste une seule valeur par centroïde calculée globalement, trop grossière pour distinguer les bandes fines de ce damier précis, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
+**Mise à jour** : Multi Cross (un motif en damier fin) était auparavant documenté comme une limite connue du RBF - le sigma, calculé comme la distance moyenne entre toutes les paires de centroïdes, était trop grossier pour distinguer les bandes fines de ce damier. Depuis le nouveau calcul de sigma (plus proche voisin, voir plus haut) combiné à davantage de centroïdes (k=150, un peu plus qu'une case du damier 8×8), ce cas réussit maintenant à 94%. Les 6 cas de test et le dataset réel fonctionnent tous bien.
 
 # Sous-apprentissage, sur-apprentissage et biais du dataset
 
@@ -238,8 +240,8 @@ Jusqu'ici, on affichait juste une précision finale (entraînement vs test). Mai
 
 Pour chaque valeur, on entraîne **uniquement sur les photos d'entraînement**, puis on calcule la précision à la fois sur l'entraînement et sur le test (jamais vu). On observe sur `test_sous_sur_apprentissage.png` :
 
-- **Trop simple** (PMC avec 1 seul neurone caché, par exemple) : précision basse sur l'entraînement ET le test (~20%/17%) - c'est le sous-apprentissage, le modèle n'a tout simplement pas assez de "capacité" pour apprendre le problème.
-- **Trop complexe** (SVM avec gamma élevé, RBF avec beaucoup de centroïdes) : la précision d'entraînement grimpe (jusqu'à 100% pour le SVM) pendant que celle de test stagne ou redescend - c'est le sur-apprentissage, le modèle "apprend par cœur" les photos d'entraînement au lieu d'une règle générale.
+- **Trop simple** (PMC avec 1 seul neurone caché) : la précision d'entraînement est nettement plus basse qu'avec plus de neurones (83% contre 89% dès 2 neurones) - c'est un début de sous-apprentissage, même si avec un dataset aussi petit (65 photos) un modèle très simple peut encore s'en sortir par chance sur certaines photos de test.
+- **Trop complexe** (SVM avec gamma élevé, RBF avec beaucoup de centroïdes) : la précision d'entraînement grimpe (jusqu'à 100% pour le SVM, 97% pour le RBF) pendant que celle de test stagne ou redescend (de 94% à 82% pour le RBF) - c'est le sur-apprentissage, le modèle "apprend par cœur" les photos d'entraînement au lieu d'une règle générale.
 - Entre les deux se trouve un "bon" compromis (ex: PMC avec `h_dim=4`, SVM avec un petit `gamma`).
 
 ## Biais dans le dataset : l'ordre des photos compte
@@ -252,9 +254,9 @@ C'est un exemple concret de biais introduit par l'organisation du dataset, pas p
 
 En plus des courbes de complexité, on trace aussi des courbes d'apprentissage classiques : cette fois la complexité du modèle est **fixe**, et on regarde comment la précision évolue au fil des epochs d'entraînement (`test_courbes_apprentissage.png`) :
 
-- **SVM** : monte progressivement de ~5% (quasi pas entraîné) à 98%/82%, puis reste stable - une courbe de convergence classique et propre.
+- **SVM** : monte progressivement de ~5% (quasi pas entraîné) à 100%/82%, puis reste stable - une courbe de convergence classique et propre.
 - **RBF** : converge très vite (dès une dizaine d'epochs) et reste stable ensuite.
-- **PMC** : un résultat plus surprenant - la précision monte bien jusqu'à 100%/100% vers 500-1000 epochs, mais **s'effondre à 55%/53% à 5000 epochs** avant de remonter partiellement à 10000. Ce n'est pas un bug : le taux d'apprentissage du PMC est fixé en dur à 0.05 dans le C, sans aucune diminution au fil du temps. Avec trop d'epochs, les mises à jour des poids finissent par "dépasser" l'optimum trouvé et le réseau devient instable avant de se re-stabiliser partiellement. C'est un exemple concret du problème classique "un taux d'apprentissage trop grand pour un entraînement trop long".
+- **PMC** : un résultat plus surprenant - la précision de test monte jusqu'à 100% vers 1000 epochs, puis **redescend à 82% à 5000-10000 epochs** alors que la précision d'entraînement continue, elle, de monter lentement (83%→89%). Ce n'est pas un bug : le taux d'apprentissage du PMC est fixé en dur à 0.05 dans le C, sans aucune diminution au fil du temps. Avec trop d'epochs, les mises à jour des poids finissent par "dépasser" le meilleur point trouvé vers 1000 epochs - un exemple concret du problème classique "un taux d'apprentissage trop grand pour un entraînement trop long", même si l'effet est ici plus modéré qu'un effondrement complet.
 
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 
