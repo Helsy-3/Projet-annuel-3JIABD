@@ -37,27 +37,28 @@ void assign_clusters(int K, int dataset_rows, int dataset_columns, double datase
     }
     for (int i = 0; i < dataset_rows; i++){
         int closest_centroid_index = calculer_closest_centroid(dataset_array[i], K, dataset_columns, centroids_array);
-        int cluster_dot_index = cluster_sizes[closest_centroid_index]; // On regarde combien de points sont déjà dans ce cluster
-        clusters_array[closest_centroid_index][cluster_dot_index] = i; // On ajoute le point au cluster
+        int dot_cluster_index = cluster_sizes[closest_centroid_index]; // On regarde combien de points sont déjà dans ce cluster
+        clusters_array[closest_centroid_index][dot_cluster_index] = i; // On ajoute le point au cluster
         cluster_sizes[closest_centroid_index]++;              // Le cluster contient maintenant un point de plus
     }
 }
 
-// ETAPE 3 : Mettre à jour les centroïdes. Pour chaque cluster, on calcule la moyenne de tous les points. 
-// Cette moyenne devient le nouveau centroïde.
+// ETAPE 3 : Pour chaque cluster, la moyenne de tous les points devient le nouveau centroïde.
 void update_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][dataset_columns]) {
-    for (int cluster_index = 0; cluster_index < K; cluster_index++) {// Pour chaque cluster
+    for (int cluster_index = 0; cluster_index < K; cluster_index++) { // Pour chaque cluster
         if (cluster_sizes[cluster_index] == 0) continue; // Cluster vide : on garde l'ancien centroïde (sinon 0/0 = NaN)
-        for (int vector_index = 0; vector_index < dataset_columns; vector_index++) { // Pour chaque dimension d'un point
+        
+        for (int dimension = 0; dimension < dataset_columns; dimension++) { // Pour chaque dimension d'un point
             double sum = 0.0;
             // Parcourir tous les points du cluster
             for (int dot_index = 0; dot_index < cluster_sizes[cluster_index]; dot_index++) {  // Récupérer l'indice du point dans le dataset
                 int dot_index_dataset = clusters_array[cluster_index][dot_index];  // Ajouter la coordonnée du point pour cette dimension
-                double dot_dimension = dataset_array[dot_index_dataset][vector_index];
+                double dot_dimension = dataset_array[dot_index_dataset][dimension];
                 sum += dot_dimension;
             }
+
             double mean = sum / cluster_sizes[cluster_index]; // Calculer la moyenne de cette dimension
-            centroids_array[cluster_index][vector_index] = mean;   // Mettre à jour la coordonnée du centroïde
+            centroids_array[cluster_index][dimension] = mean;   // Mettre à jour la coordonnée du centroïde
         }
     }
 }
