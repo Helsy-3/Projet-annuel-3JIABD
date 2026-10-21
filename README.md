@@ -145,11 +145,13 @@ erreurs = lib_etape1.run_perceptron_dataset(vecteurs_c, labels_c, len(labels))
 
 Au début, chaque modèle était entraîné et évalué sur exactement les mêmes photos - donc la précision affichée ne disait rien de plus que "le modèle a-t-il appris ces photos par cœur", pas "est-ce qu'il reconnaîtrait une photo jamais vue". On a donc ajouté une vraie séparation entraînement/test (80%/20%, au moins 1 photo de test par catégorie même quand une catégorie est petite) pour le Perceptron (étape 1) et le RBF (étape 5) : on entraîne sur ~80% des photos, puis on mesure la précision sur les ~20% restantes, jamais vues pendant l'entraînement.
 
+Ce split est maintenant **physique**, pas juste calculé en mémoire à chaque script : les photos sont rangées une fois pour toutes dans `dataset-img/train/<categorie>/` et `dataset-img/test/<categorie>/`. Tous les scripts (et le notebook) lisent directement ces deux dossiers - une seule source de vérité, plus simple à vérifier à l'œil (on peut ouvrir le dossier `test/` et voir exactement quelles photos n'ont jamais servi à l'entraînement).
+
 Au départ, cette séparation n'était pas possible pour le PMC (étape 3) : `run_pmc_dataset()` entraînait un réseau tout neuf et l'évaluait immédiatement sur le même tableau, en une seule fonction, puis libérait (`free()`) les poids appris avant de retourner - Python ne récupérait jamais le réseau entraîné pour le réutiliser sur d'autres données. On a corrigé ça en modifiant `run_pmc_dataset()` pour qu'elle recopie les poids appris (W1, b1, W2, b2) dans des tableaux fournis par Python avant de les libérer, et en ajoutant une nouvelle fonction `predire_pmc()` qui prédit la classe d'un exemple à partir de poids déjà entraînés, sans ré-entraîner. Ça permet maintenant d'entraîner sur les photos d'entraînement puis de prédire sur les photos de test avec les mêmes poids, comme pour le Perceptron et le RBF.
 
 Résultats actuels (82 photos : 10 plastique, 68 verre, 4 métal - un jeu provisoire, le dataset complet de 1000 photos/catégorie d'Helsy n'est pas encore intégré) :
-- Modèle linéaire (étape 1, plastique vs métal) : 55% en entraînement, 67% en test - le modèle linéaire peine sur de vraies photos, cohérent avec sa limite déjà démontrée sur les cas non linéaires (XOR, Cross)
-- PMC (étape 3) : 88% en entraînement, 76% en test
+- Modèle linéaire (étape 1, plastique vs métal) : 73% en entraînement, 67% en test - le modèle linéaire peine sur de vraies photos, cohérent avec sa limite déjà démontrée sur les cas non linéaires (XOR, Cross)
+- PMC (étape 3) : 89% en entraînement, 82% en test
 - RBF (étape 5) : 88% en entraînement, 94% en test
 
 ## Sauvegarde et chargement des modèles
@@ -158,10 +160,11 @@ Le SVM (étape 4) avait déjà `svm_sauvegarder()`/`svm_charger()`. On a ajouté
 
 ## Client/serveur : prédire sur une nouvelle photo
 
-Le sujet demande une application qui communique avec une API hébergeant les modèles entraînés, capable de prédire sur de nouvelles données. `app/` contient maintenant :
+Le sujet demande une application qui communique avec une API hébergeant les modèles entraînés, capable de prédire sur de nouvelles données. `app/` contient :
 
-- `app/entrainer_modele.py` : entraîne un SVM un-contre-tous sur `dataset-img/` (noyau RBF) et sauvegarde un fichier par classe dans `app/modeles/` (ignoré par git, comme les `.so` - chacun régénère ses modèles localement avec ce script)
-- `app/server.py` : un serveur Flask qui charge ces modèles au démarrage et expose deux routes :
+- `app/entrainer_modele.py` : entraîne un SVM un-contre-tous (noyau RBF) et sauvegarde un fichier par classe dans `app/modeles/` (`svm_*.txt`, ignoré par git comme les `.so` - chacun régénère ses modèles localement)
+- `app/entrainer_modele_rbf.py` : pareil, mais avec le RBF Network (`rbf_*.txt`) - c'est celui-ci que `server.py` utilise actuellement
+- `app/server.py` : un serveur Flask qui charge les modèles RBF au démarrage et expose deux routes :
   - `/ping` : vérifie que le serveur tourne
   - `/predict` (POST) : reçoit un vecteur de 12 valeurs (une photo déjà réduite en 2×2 pixels et normalisée) en JSON, et renvoie la classe prédite avec le score de chaque modèle
 - `app/client.py` : prend une photo en argument, la transforme en vecteur (`image_vers_vecteur()`, comme partout ailleurs), l'envoie au serveur et affiche la prédiction
@@ -169,12 +172,12 @@ Le sujet demande une application qui communique avec une API hébergeant les mod
 Exemple d'utilisation (depuis la racine du repo, dans deux terminaux) :
 
 ```bash
-python app/entrainer_modele.py          # une seule fois, pour creer app/modeles/
+python app/entrainer_modele_rbf.py      # une seule fois, pour creer app/modeles/
 python app/server.py                    # terminal 1 : lance le serveur
 python app/client.py dataset-img/verre/01.jpeg   # terminal 2 : demande une prediction
 ```
 
-Testé sur une photo de chaque catégorie (jamais vue par le modèle au moment du test, mais déjà dans le jeu d'entraînement puisqu'on entraîne sur tout `dataset-img/` ici) : les 3 prédictions sont correctes, avec un score net pour la bonne classe et des scores négatifs pour les deux autres.
+**Limite connue** : testé sur une photo de chaque catégorie, seule "verre" est systématiquement bien prédite ; plastique et métal sont parfois mal classés. Le dataset actuel (82 photos, très déséquilibré : 68 verre / 10 plastique / 4 métal) fait qu'un modèle "un contre tous" peut atteindre une précision élevée (93-96%) juste en prédisant "pas cette classe" la plupart du temps, sans bien reconnaître les rares vrais exemples des petites classes (un piège classique des classes déséquilibrées). Ça devrait s'améliorer une fois le dataset complet et équilibré d'Helsy (1000 photos/catégorie) intégré. La version SVM (`app/entrainer_modele.py`), testée sur le même dataset déséquilibré, avait donné les 3 prédictions correctes - à garder en tête si le déséquilibre reste un problème après le nouveau dataset.
 
 # Etape 4 : SVM avec un noyau RBF
 Un SVM avec un noyau RBF (Radial Basis Function, ou noyau gaussien) est un modèle de machine learning qui sert à classer des données ou à faire des prédictions lorsque les catégories ne peuvent pas être séparées par une simple ligne droite. 
@@ -208,21 +211,52 @@ Théoriquement et structurellement, un réseau RBF ne comporte qu'une seule couc
 
 ## Branchement de l'étape 5 : une particularité
 
-Contrairement aux autres étapes, la fonction `RBNF()` du fichier C ne renvoie rien à Python - elle fait seulement des `printf()` côté C. On ne peut donc pas s'en servir comme point d'entrée unique. La solution, sans modifier le fichier C : on appelle depuis Python, dans le même ordre que `RBNF()` le fait en interne, les fonctions individuelles déjà exportées (`find_centroids`, `assign_clusters`, `update_centroids_mean`, `calculer_sigma`, `train_weights`, `calculer_rbf_closeness_to_centroid`, `calculer_output`) - ce qui permet de récupérer les centroïdes, le sigma et les poids appris directement dans des tableaux numpy, et de les réutiliser pour prédire sur de nouvelles données (voir la séparation entraînement/test plus bas).
+Contrairement aux autres étapes, la fonction `RBNF()` du fichier C ne renvoie rien à Python - elle fait seulement des `printf()` côté C. On ne peut donc pas s'en servir comme point d'entrée unique. La solution, sans modifier le fichier C : on appelle depuis Python, dans le même ordre que `RBNF()` le fait en interne, les fonctions individuelles déjà exportées (`find_centroids`, `assign_clusters`, `update_centroids`, `calculer_sigma`, `recursive_train_weights`, `calculer_rbf_closeness_to_centroid`, `calculer_dot_output`) - ce qui permet de récupérer les centroïdes, le sigma et les poids appris directement dans des tableaux numpy, et de les réutiliser pour prédire sur de nouvelles données (voir la séparation entraînement/test plus bas).
 
-Pendant les tests, on a trouvé un vrai bug numérique dans le k-means partagé (`assign_clusters`/`update_centroids_mean`) : si un cluster se retrouve vide à une itération, `update_centroids_mean` divise par zéro et son centroïde devient `NaN`. Comme la fonction `calculer_closest_centroid` (dans `utils.c`) compare toujours la distance par rapport au centroïde 0 en premier, dès que ce centroïde-là devient `NaN`, tous les points lui sont assignés pour toujours (une comparaison `distance < NaN` est toujours fausse) - ce qui contamine tout le modèle derrière (sigma, poids, prédictions). On a corrigé ça côté Python uniquement, sans toucher au C : on fait plusieurs tirages aléatoires des centroïdes de départ et on garde celui qui apprend le mieux (une pratique standard pour le k-means, qui est sensible à son initialisation).
+Mise à jour des centres et clusters : K-means fonctionne par répétition de deux étapes :
+- `assign_clusters` : chaque point rejoint le cluster dont le centroïde est le plus proche.
+- `update_centroids` : chaque centroïde se déplace vers la moyenne des points de son cluster.
 
-Enfin, un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste une limite connue du RBF tel qu'il est implémenté ici : le sigma (largeur des gaussiennes) est une seule valeur globale, calculée comme la distance moyenne entre tous les centroïdes - trop grossière pour distinguer les bandes fines de ce damier, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500, sans amélioration). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
+L'affectation des points dépend de la position des centroïdes. Or, après la mise à jour, les centroïdes changent de position - certains points peuvent donc changer de cluster. Il faut alors recommencer l'affectation à chaque itération, car, comme les centroïdes ont bougé, il faut revérifier si chaque point appartient toujours au bon cluster.
 
-Mise à jour des centres et clusters: 
-K-means fonctionne par répétition de deux étapes :
-- assign_clusters : chaque point rejoint le cluster dont le centroïde est le plus proche.
-- update_centroids : chaque centroïde se déplace vers la moyenne des points de son cluster.
--> L'affectation des points dépend de la position des centroïdes. Or, après la mise à jour, les centroïdes changent de position. Certains points peuvent donc changer de cluster.
+Pendant les tests, on avait trouvé un vrai bug numérique dans ce k-means : si un cluster se retrouvait vide à une itération, la mise à jour des centroïdes divisait par zéro et le centroïde devenait `NaN`, ce qui contaminait tout le modèle derrière (sigma, poids, prédictions). Ça a depuis été corrigé **directement dans le C** : `find_centroids` tire maintenant les centroïdes de départ sans répétition (mélange de Fisher-Yates, donc jamais deux centroïdes identiques au départ), et `update_centroids` garde l'ancien centroïde au lieu de diviser par zéro si un cluster se retrouve vide. Avant cette correction, on avait contourné le problème côté Python (plusieurs tirages aléatoires, on gardait le meilleur) - ce filet de sécurité est resté dans le code mais ne devrait plus jamais se déclencher.
 
-Lors de la mise à jour des centroïdes, on calcule leurs moyennes:
-Pour chaque cluster, on calcule la moyenne de tous les points. Cette moyenne devient le nouveau centroïde.
-Il faut ensuite recommencer l'affectation à chaque cluster, car, comme les centroïdes ont bougé, il faut vérifier si chaque point appartient toujours au cluster. 
+Le calcul de `calculer_sigma` a aussi été amélioré : au lieu de la distance moyenne entre **toutes les paires** de centroïdes, c'est maintenant la distance moyenne de chaque centroïde à son **voisin le plus proche** - un sigma plus localisé, qui a amélioré la précision sur plusieurs cas de test (ex: Cross est passé de 78% à 95%).
+
+**Mise à jour** : Multi Cross (un motif en damier fin) était auparavant documenté comme une limite connue du RBF - le sigma, calculé comme la distance moyenne entre toutes les paires de centroïdes, était trop grossier pour distinguer les bandes fines de ce damier. Depuis le nouveau calcul de sigma (plus proche voisin, voir plus haut) combiné à davantage de centroïdes (k=150, un peu plus qu'une case du damier 8×8), ce cas réussit maintenant à 94%. Les 6 cas de test et le dataset réel fonctionnent tous bien.
+
+# Sous-apprentissage, sur-apprentissage et biais du dataset
+
+Le sujet demande de montrer, avec des courbes, des phénomènes vus en cours : le sous-apprentissage, le sur-apprentissage, le biais dans le dataset, et la difficulté de trouver un modèle "ni trop simple, ni trop complexe". On explique ici ce qu'on a fait pour chacun, en gardant les choses simples (script `C-algorithms/test_sous_sur_apprentissage.py`).
+
+## Sous-apprentissage et sur-apprentissage : courbe de complexité
+
+Jusqu'ici, on affichait juste une précision finale (entraînement vs test). Mais ça ne montre pas *pourquoi* un modèle est trop simple ou trop compliqué. Pour ça, il faut faire varier la complexité du modèle et regarder comment la précision évolue :
+
+- **Perceptron** : sa complexité est fixe (un seul neurone), donc on ne peut rien faire varier - on observe juste qu'il plafonne plus bas que les autres modèles, quel que soit le nombre d'epochs.
+- **PMC** : on fait varier `h_dim`, la taille de la couche cachée (1, 2, 4, 8, 16, 32 neurones).
+- **SVM** : on fait varier `gamma`, la largeur du noyau RBF.
+- **RBF Network** : on fait varier `K`, le nombre de centroïdes.
+
+Pour chaque valeur, on entraîne **uniquement sur les photos d'entraînement**, puis on calcule la précision à la fois sur l'entraînement et sur le test (jamais vu). On observe sur `test_sous_sur_apprentissage.png` :
+
+- **Trop simple** (PMC avec 1 seul neurone caché) : la précision d'entraînement est nettement plus basse qu'avec plus de neurones (83% contre 89% dès 2 neurones) - c'est un début de sous-apprentissage, même si avec un dataset aussi petit (65 photos) un modèle très simple peut encore s'en sortir par chance sur certaines photos de test.
+- **Trop complexe** (SVM avec gamma élevé, RBF avec beaucoup de centroïdes) : la précision d'entraînement grimpe (jusqu'à 100% pour le SVM, 97% pour le RBF) pendant que celle de test stagne ou redescend (de 94% à 82% pour le RBF) - c'est le sur-apprentissage, le modèle "apprend par cœur" les photos d'entraînement au lieu d'une règle générale.
+- Entre les deux se trouve un "bon" compromis (ex: PMC avec `h_dim=4`, SVM avec un petit `gamma`).
+
+## Biais dans le dataset : l'ordre des photos compte
+
+En construisant la courbe du perceptron, on a remarqué un résultat bizarre : avec très peu d'epochs, il prédisait "métal" pour quasiment toutes les photos, peu importe leur vraie classe. En creusant, on a compris pourquoi : nos photos sont rangées **par classe** dans les dossiers (tout le plastique, puis tout le verre, puis tout le métal), et le perceptron apprend **point par point, dans l'ordre d'arrivée**. Avec peu d'epochs, il n'a pas le temps de "digérer" toutes les classes correctement - les derniers points qu'il voit (le métal, dernier dans l'ordre) ont une influence disproportionnée sur le résultat final.
+
+C'est un exemple concret de biais introduit par l'organisation du dataset, pas par l'algorithme. La correction est simple : **mélanger** les photos avant l'entraînement (une pratique standard). Le graphique `test_biais_donnees.png` compare les deux : sans mélange, la précision reste très mauvaise (~6%) pendant longtemps ; avec mélange, elle est bonne (65-82%) dès la première epoch.
+
+## Courbes d'apprentissage : précision au fil des epochs
+
+En plus des courbes de complexité, on trace aussi des courbes d'apprentissage classiques : cette fois la complexité du modèle est **fixe**, et on regarde comment la précision évolue au fil des epochs d'entraînement (`test_courbes_apprentissage.png`) :
+
+- **SVM** : monte progressivement de ~5% (quasi pas entraîné) à 100%/82%, puis reste stable - une courbe de convergence classique et propre.
+- **RBF** : converge très vite (dès une dizaine d'epochs) et reste stable ensuite.
+- **PMC** : un résultat plus surprenant - la précision de test monte jusqu'à 100% vers 1000 epochs, puis **redescend à 82% à 5000-10000 epochs** alors que la précision d'entraînement continue, elle, de monter lentement (83%→89%). Ce n'est pas un bug : le taux d'apprentissage du PMC est fixé en dur à 0.05 dans le C, sans aucune diminution au fil du temps. Avec trop d'epochs, les mises à jour des poids finissent par "dépasser" le meilleur point trouvé vers 1000 epochs - un exemple concret du problème classique "un taux d'apprentissage trop grand pour un entraînement trop long", même si l'effet est ici plus modéré qu'un effondrement complet.
 
 # Difficultés rencontrées
 Pour le choix des images, attention à ne pas prendre que des images avec un fond blanc, de peur que le modèle fasse de fausses prédictions. 

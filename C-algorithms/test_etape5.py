@@ -1,22 +1,21 @@
 """
-test_etape5.py - Teste ETAPE5.RBNF.c (RBF Network) depuis Python (ctypes)
+test_etape5.py - Teste ETAPE5.RBF.c (RBF Network) depuis Python (ctypes)
 
-Contrairement aux autres etapes, la fonction RBNF() du fichier C ne renvoie
+Contrairement aux autres etapes, la fonction RBF() du fichier C ne renvoie
 rien a Python (elle fait juste des printf en C). On appelle donc depuis
-Python, dans le meme ordre que RBNF() le fait en interne, les fonctions C
+Python, dans le meme ordre que RBF() le fait en interne, les fonctions C
 individuelles (k-means, sigma, entrainement des poids, prediction) pour
 recuperer les resultats - sans ajouter ni modifier de code dans le C.
 
 Compilation (depuis la racine du repo) - utils.c doit etre compile avec,
-car ETAPE5.RBNF.c appelle calculer_closest_centroid() et calculer_output()
+car ETAPE5.RBF.c appelle calculer_closest_centroid() et calculer_dot_output()
 qui y sont definies :
-    gcc -shared -fPIC C-algorithms/ETAPE5.RBNF.c C-algorithms/utils.c -o C-algorithms/ETAPE5.RBNF.so -lm
+    gcc -shared -fPIC C-algorithms/ETAPE5.RBF.c C-algorithms/utils.c -o C-algorithms/ETAPE5.RBF.so -lm
 
 Utilisation :
     python C-algorithms/test_etape5.py
 """
 
-import contextlib
 import ctypes
 import os
 import sys
@@ -25,49 +24,46 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-
-@contextlib.contextmanager
-def silencieux():
-    """Redirige temporairement la sortie console (y compris les printf() du C) vers /dev/null."""
-    stdout_original = os.dup(1)
-    with open(os.devnull, "w") as trou_noir:
-        os.dup2(trou_noir.fileno(), 1)
-        try:
-            yield
-        finally:
-            os.dup2(stdout_original, 1)
-            os.close(stdout_original)
-
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
-NOM_LIB = "ETAPE5.RBNF.dll" if sys.platform.startswith("win") else "ETAPE5.RBNF.so"
+NOM_LIB = "ETAPE5.RBF.dll" if sys.platform.startswith("win") else "ETAPE5.RBF.so"
 lib = ctypes.CDLL(os.path.join(DOSSIER, NOM_LIB))
 
 P_DOUBLE = ctypes.POINTER(ctypes.c_double)
 P_INT = ctypes.POINTER(ctypes.c_int)
 
+# Chacune de ces fonctions est un morceau de l'algorithme RBF (ecrit en C) qu'on appelle
+# depuis Python dans le bon ordre - RBF() en C fait exactement la meme sequence, mais
+# ne renvoie rien a Python, donc on la reconstruit nous-memes ici.
+
+# ETAPE 1/2 du k-means : choisir des centroides de depart, puis les stabiliser
 lib.find_centroids.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE]
-lib.find_centroids.restype = None
+lib.find_centroids.restype = None  # void en C -> None cote ctypes
 
 lib.assign_clusters.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_INT, P_INT]
 lib.assign_clusters.restype = None
 
-lib.update_centroids_mean.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
-lib.update_centroids_mean.restype = None
+lib.update_centroids.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
+lib.update_centroids.restype = None
 
+# ETAPE 3 : sigma = largeur des gaussiennes (distance moyenne entre les centroides)
 lib.calculer_sigma.argtypes = [ctypes.c_int, ctypes.c_int, P_DOUBLE]
 lib.calculer_sigma.restype = ctypes.c_double
 
-lib.calculer_rbf_closeness_to_centroid.argtypes = [ctypes.c_int, P_DOUBLE, ctypes.c_int, P_DOUBLE,
-                                                    ctypes.c_double, P_DOUBLE]
-lib.calculer_rbf_closeness_to_centroid.restype = None
+# ETAPE 4 : pour un point donne, sa "proximite" (activation RBF) a chaque centroide
+lib.calculer_dot_rbf_closeness_to_centroids.argtypes = [ctypes.c_int, P_DOUBLE, ctypes.c_int, P_DOUBLE,
+                                                         ctypes.c_double, P_DOUBLE]
+lib.calculer_dot_rbf_closeness_to_centroids.restype = None
 
-lib.train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
+# ETAPE 5 : apprend les poids (un par centroide) par descente de gradient
+lib.recursive_train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
                                ctypes.c_double, P_DOUBLE, ctypes.c_double, ctypes.c_int]
-lib.train_weights.restype = None
+lib.recursive_train_weights.restype = None
 
-lib.calculer_output.argtypes = [ctypes.c_int, P_DOUBLE, P_DOUBLE]
-lib.calculer_output.restype = ctypes.c_double
+# ETAPE 6 : prediction finale = somme ponderee des proximites (voir calculer_dot_rbf_closeness_to_centroids)
+lib.calculer_dot_output.argtypes = [ctypes.c_int, P_DOUBLE, P_DOUBLE]
+lib.calculer_dot_output.restype = ctypes.c_double
 
+# Sauvegarde/chargement : centroides + sigma + poids dans un fichier texte simple
 lib.rbf_sauvegarder.argtypes = [ctypes.c_char_p, P_DOUBLE, ctypes.c_double, P_DOUBLE, ctypes.c_int, ctypes.c_int]
 lib.rbf_sauvegarder.restype = ctypes.c_int
 lib.rbf_charger.argtypes = [ctypes.c_char_p, P_DOUBLE, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
@@ -91,7 +87,7 @@ class RBF:
         for _ in range(100):  # K-MEANS : on stabilise les centroides
             lib.assign_clusters(k, n, d, X.ctypes.data_as(P_DOUBLE), centroids.ctypes.data_as(P_DOUBLE),
                                  clusters.ctypes.data_as(P_INT), tailles.ctypes.data_as(P_INT))
-            lib.update_centroids_mean(k, n, d, X.ctypes.data_as(P_DOUBLE), clusters.ctypes.data_as(P_INT),
+            lib.update_centroids(k, n, d, X.ctypes.data_as(P_DOUBLE), clusters.ctypes.data_as(P_INT),
                                        tailles.ctypes.data_as(P_INT), centroids.ctypes.data_as(P_DOUBLE))
         return centroids
 
@@ -116,10 +112,10 @@ class RBF:
                     continue
                 sigma = lib.calculer_sigma(k, d, centroids.ctypes.data_as(P_DOUBLE))
                 poids = np.zeros(k)
-                with silencieux():  # train_weights fait un printf() par epoch, on l'etouffe
-                    lib.train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
-                                       centroids.ctypes.data_as(P_DOUBLE), sigma,
-                                       poids.ctypes.data_as(P_DOUBLE), self.learning_rate, self.epochs)
+                # recursive_train_weights affiche un printf() par epoch (MSE) dans la console - normal.
+                lib.recursive_train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
+                                   centroids.ctypes.data_as(P_DOUBLE), sigma,
+                                   poids.ctypes.data_as(P_DOUBLE), self.learning_rate, self.epochs)
                 self.k, self.centroids, self.sigma, self.poids = k, centroids, sigma, poids
                 precision = (self.predire(X) == y).mean()
                 if precision > meilleure_precision:
@@ -141,10 +137,10 @@ class RBF:
         proximite = np.zeros(self.k)
         sorties = np.zeros(len(points))
         for i, point in enumerate(points):
-            lib.calculer_rbf_closeness_to_centroid(d, point.ctypes.data_as(P_DOUBLE), self.k,
+            lib.calculer_dot_rbf_closeness_to_centroids(d, point.ctypes.data_as(P_DOUBLE), self.k,
                                                      self.centroids.ctypes.data_as(P_DOUBLE), self.sigma,
                                                      proximite.ctypes.data_as(P_DOUBLE))
-            sorties[i] = lib.calculer_output(self.k, proximite.ctypes.data_as(P_DOUBLE),
+            sorties[i] = lib.calculer_dot_output(self.k, proximite.ctypes.data_as(P_DOUBLE),
                                               self.poids.ctypes.data_as(P_DOUBLE))
         return sorties
 
@@ -239,19 +235,16 @@ def lister_images(dossier):
     return [os.path.join(dossier, f) for f in sorted(os.listdir(dossier)) if f.lower().endswith(extensions)]
 
 
-def separer_train_test(chemins, classes, proportion_test=0.2, graine=0):
-    """Split stratifie : au moins 1 exemple de test par classe, meme si la classe est petite."""
-    rng_split = np.random.default_rng(graine)
-    chemins = np.array(chemins)
-    train_idx, test_idx = [], []
-    for c in np.unique(classes):
-        idx = np.where(classes == c)[0]
-        rng_split.shuffle(idx)
-        n_test = max(1, round(len(idx) * proportion_test))
-        test_idx.extend(idx[:n_test])
-        train_idx.extend(idx[n_test:])
-    return (chemins[train_idx].tolist(), classes[train_idx],
-            chemins[test_idx].tolist(), classes[test_idx])
+def charger_dataset_reel(sous_dossier):
+    """sous_dossier = 'train' ou 'test' (voir dataset-img/separer_dataset.py, qui a deja
+    separe les photos une fois pour toutes - pas besoin de refaire le split ici)."""
+    base = os.path.join(DOSSIER, "..", "dataset-img", sous_dossier)
+    chemins_plastic = lister_images(os.path.join(base, "plastic"))
+    chemins_verre = lister_images(os.path.join(base, "verre"))
+    chemins_metal = lister_images(os.path.join(base, "metal"))
+    chemins = chemins_plastic + chemins_verre + chemins_metal
+    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
+    return chemins, classes
 
 
 tout_ok = True
@@ -277,6 +270,10 @@ def main():
     print("=== RBF Network sur les 6 cas de tests officiels ===")
     print("(le RBF gere les frontieres non lineaires, contrairement au perceptron lineaire)\n")
 
+    # k = nombre de centroides choisi a la main pour chaque cas : il faut assez de
+    # centroides pour "couvrir" la forme de la frontiere (plus une frontiere est
+    # decoupee/complexe, plus il en faut), mais pas trop par rapport au nombre de
+    # points sinon le modele risque le sur-apprentissage (voir le README).
     fig, axes = plt.subplots(2, 3, figsize=(13, 8))
     cas = [
         ("Linear Simple", (np.array([[1, 1], [2, 3], [3, 3]], dtype=float), np.array([1, -1, -1])), RBF(k=2)),
@@ -303,14 +300,12 @@ def main():
     fig.savefig(chemin, dpi=110)
     print(f"\nFigure enregistree : {chemin}")
 
+    # Deuxieme partie : meme principe, mais sur de vraies photos au lieu de points 2D.
+    # On separe les photos en train/test AVANT d'entrainer, pour mesurer si le modele
+    # generalise a des photos qu'il n'a jamais vues (pas juste s'il les a apprises par coeur).
     print("\n=== Dataset reel (photos de dechets) ===")
-    chemins_plastic = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "plastic"))
-    chemins_verre = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "verre"))
-    chemins_metal = lister_images(os.path.join(DOSSIER, "..", "dataset-img", "metal"))
-    chemins = chemins_plastic + chemins_verre + chemins_metal
-    classes = np.array([0] * len(chemins_plastic) + [1] * len(chemins_verre) + [2] * len(chemins_metal))
-
-    chemins_train, classes_train, chemins_test, classes_test = separer_train_test(chemins, classes)
+    chemins_train, classes_train = charger_dataset_reel("train")
+    chemins_test, classes_test = charger_dataset_reel("test")
     vecteurs_train = np.array([image_vers_vecteur(c) for c in chemins_train])
     vecteurs_test = np.array([image_vers_vecteur(c) for c in chemins_test])
 
