@@ -63,26 +63,33 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
     }
 }
 
-// ETAPE 4: Le sigma représente la distance moyenne entre chaque centroïde et son voisin le PLUS PROCHE.
+// ETAPE 4: Le sigma représente la somme des distances moyennes entre chaque centroïde et son voisin le PLUS PROCHE.
 // Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
  double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
+    
     double sum_distance = 0.0; // somme des distances de chaque centroïde à son plus proche voisin
 
+    // EACH CENTROID
     for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++){ // on parcourt tous les centroïdes
-        double min_distance = INFINITY;
-        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++){
+        double min_centroid_distance = INFINITY;
+        
+        // FIND CURRENT CENTROID CLOSEST NEIGHBOOR
+        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++){ // on parcourt tous les voisins du centroïde courant
             if (other_centroïd_index == current_centroïd_index) continue;
             double squared_distance = 0.0;
             for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++){ // parcourir toutes les dimensions des centroïdes
                 double difference = centroids_array[current_centroïd_index][vecteur_dimension] - centroids_array[other_centroïd_index][vecteur_dimension]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
                 squared_distance += difference * difference; // Élever cette différence au carré et l'ajouter à la somme des carrés des différences
             }
-            double distance_to_centroid = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
-            if (distance_to_centroid < min_distance)
-                min_distance = distance_to_centroid; // On garde la plus petite distance : celle du plus proche voisin
+            double distance_to_voisin_centroid = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
+            if (distance_to_voisin_centroid < min_centroid_distance)
+                min_centroid_distance = distance_to_voisin_centroid; // On garde la plus petite distance : celle du plus proche voisin
         }
-        sum_distance += min_distance;
+
+        // ADD DISTANCE TO sum_distance
+        sum_distance += min_centroid_distance;
     }
+    
     double sigma = sum_distance / K;
     return sigma;
 }
