@@ -158,10 +158,11 @@ Le SVM (étape 4) avait déjà `svm_sauvegarder()`/`svm_charger()`. On a ajouté
 
 ## Client/serveur : prédire sur une nouvelle photo
 
-Le sujet demande une application qui communique avec une API hébergeant les modèles entraînés, capable de prédire sur de nouvelles données. `app/` contient maintenant :
+Le sujet demande une application qui communique avec une API hébergeant les modèles entraînés, capable de prédire sur de nouvelles données. `app/` contient :
 
-- `app/entrainer_modele.py` : entraîne un SVM un-contre-tous sur `dataset-img/` (noyau RBF) et sauvegarde un fichier par classe dans `app/modeles/` (ignoré par git, comme les `.so` - chacun régénère ses modèles localement avec ce script)
-- `app/server.py` : un serveur Flask qui charge ces modèles au démarrage et expose deux routes :
+- `app/entrainer_modele.py` : entraîne un SVM un-contre-tous (noyau RBF) et sauvegarde un fichier par classe dans `app/modeles/` (`svm_*.txt`, ignoré par git comme les `.so` - chacun régénère ses modèles localement)
+- `app/entrainer_modele_rbf.py` : pareil, mais avec le RBF Network (`rbf_*.txt`) - c'est celui-ci que `server.py` utilise actuellement
+- `app/server.py` : un serveur Flask qui charge les modèles RBF au démarrage et expose deux routes :
   - `/ping` : vérifie que le serveur tourne
   - `/predict` (POST) : reçoit un vecteur de 12 valeurs (une photo déjà réduite en 2×2 pixels et normalisée) en JSON, et renvoie la classe prédite avec le score de chaque modèle
 - `app/client.py` : prend une photo en argument, la transforme en vecteur (`image_vers_vecteur()`, comme partout ailleurs), l'envoie au serveur et affiche la prédiction
@@ -169,12 +170,12 @@ Le sujet demande une application qui communique avec une API hébergeant les mod
 Exemple d'utilisation (depuis la racine du repo, dans deux terminaux) :
 
 ```bash
-python app/entrainer_modele.py          # une seule fois, pour creer app/modeles/
+python app/entrainer_modele_rbf.py      # une seule fois, pour creer app/modeles/
 python app/server.py                    # terminal 1 : lance le serveur
 python app/client.py dataset-img/verre/01.jpeg   # terminal 2 : demande une prediction
 ```
 
-Testé sur une photo de chaque catégorie (jamais vue par le modèle au moment du test, mais déjà dans le jeu d'entraînement puisqu'on entraîne sur tout `dataset-img/` ici) : les 3 prédictions sont correctes, avec un score net pour la bonne classe et des scores négatifs pour les deux autres.
+**Limite connue** : testé sur une photo de chaque catégorie, seule "verre" est systématiquement bien prédite ; plastique et métal sont parfois mal classés. Le dataset actuel (82 photos, très déséquilibré : 68 verre / 10 plastique / 4 métal) fait qu'un modèle "un contre tous" peut atteindre une précision élevée (93-96%) juste en prédisant "pas cette classe" la plupart du temps, sans bien reconnaître les rares vrais exemples des petites classes (un piège classique des classes déséquilibrées). Ça devrait s'améliorer une fois le dataset complet et équilibré d'Helsy (1000 photos/catégorie) intégré. La version SVM (`app/entrainer_modele.py`), testée sur le même dataset déséquilibré, avait donné les 3 prédictions correctes - à garder en tête si le déséquilibre reste un problème après le nouveau dataset.
 
 # Etape 4 : SVM avec un noyau RBF
 Un SVM avec un noyau RBF (Radial Basis Function, ou noyau gaussien) est un modèle de machine learning qui sert à classer des données ou à faire des prédictions lorsque les catégories ne peuvent pas être séparées par une simple ligne droite. 
@@ -208,11 +209,19 @@ Théoriquement et structurellement, un réseau RBF ne comporte qu'une seule couc
 
 ## Branchement de l'étape 5 : une particularité
 
-Contrairement aux autres étapes, la fonction `RBNF()` du fichier C ne renvoie rien à Python - elle fait seulement des `printf()` côté C. On ne peut donc pas s'en servir comme point d'entrée unique. La solution, sans modifier le fichier C : on appelle depuis Python, dans le même ordre que `RBNF()` le fait en interne, les fonctions individuelles déjà exportées (`find_centroids`, `assign_clusters`, `update_centroids_mean`, `calculer_sigma`, `train_weights`, `calculer_rbf_closeness_to_centroid`, `calculer_output`) - ce qui permet de récupérer les centroïdes, le sigma et les poids appris directement dans des tableaux numpy, et de les réutiliser pour prédire sur de nouvelles données (voir la séparation entraînement/test plus bas).
+Contrairement aux autres étapes, la fonction `RBNF()` du fichier C ne renvoie rien à Python - elle fait seulement des `printf()` côté C. On ne peut donc pas s'en servir comme point d'entrée unique. La solution, sans modifier le fichier C : on appelle depuis Python, dans le même ordre que `RBNF()` le fait en interne, les fonctions individuelles déjà exportées (`find_centroids`, `assign_clusters`, `update_centroids`, `calculer_sigma`, `recursive_train_weights`, `calculer_rbf_closeness_to_centroid`, `calculer_dot_output`) - ce qui permet de récupérer les centroïdes, le sigma et les poids appris directement dans des tableaux numpy, et de les réutiliser pour prédire sur de nouvelles données (voir la séparation entraînement/test plus bas).
 
-Pendant les tests, on a trouvé un vrai bug numérique dans le k-means partagé (`assign_clusters`/`update_centroids_mean`) : si un cluster se retrouve vide à une itération, `update_centroids_mean` divise par zéro et son centroïde devient `NaN`. Comme la fonction `calculer_closest_centroid` (dans `utils.c`) compare toujours la distance par rapport au centroïde 0 en premier, dès que ce centroïde-là devient `NaN`, tous les points lui sont assignés pour toujours (une comparaison `distance < NaN` est toujours fausse) - ce qui contamine tout le modèle derrière (sigma, poids, prédictions). On a corrigé ça côté Python uniquement, sans toucher au C : on fait plusieurs tirages aléatoires des centroïdes de départ et on garde celui qui apprend le mieux (une pratique standard pour le k-means, qui est sensible à son initialisation).
+Mise à jour des centres et clusters : K-means fonctionne par répétition de deux étapes :
+- `assign_clusters` : chaque point rejoint le cluster dont le centroïde est le plus proche.
+- `update_centroids` : chaque centroïde se déplace vers la moyenne des points de son cluster.
 
-Enfin, un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste une limite connue du RBF tel qu'il est implémenté ici : le sigma (largeur des gaussiennes) est une seule valeur globale, calculée comme la distance moyenne entre tous les centroïdes - trop grossière pour distinguer les bandes fines de ce damier, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500, sans amélioration). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
+L'affectation des points dépend de la position des centroïdes. Or, après la mise à jour, les centroïdes changent de position - certains points peuvent donc changer de cluster. Il faut alors recommencer l'affectation à chaque itération, car, comme les centroïdes ont bougé, il faut revérifier si chaque point appartient toujours au bon cluster.
+
+Pendant les tests, on avait trouvé un vrai bug numérique dans ce k-means : si un cluster se retrouvait vide à une itération, la mise à jour des centroïdes divisait par zéro et le centroïde devenait `NaN`, ce qui contaminait tout le modèle derrière (sigma, poids, prédictions). Ça a depuis été corrigé **directement dans le C** : `find_centroids` tire maintenant les centroïdes de départ sans répétition (mélange de Fisher-Yates, donc jamais deux centroïdes identiques au départ), et `update_centroids` garde l'ancien centroïde au lieu de diviser par zéro si un cluster se retrouve vide. Avant cette correction, on avait contourné le problème côté Python (plusieurs tirages aléatoires, on gardait le meilleur) - ce filet de sécurité est resté dans le code mais ne devrait plus jamais se déclencher.
+
+Le calcul de `calculer_sigma` a aussi été amélioré : au lieu de la distance moyenne entre **toutes les paires** de centroïdes, c'est maintenant la distance moyenne de chaque centroïde à son **voisin le plus proche** - un sigma plus localisé, qui a amélioré la précision sur plusieurs cas de test (ex: Cross est passé de 78% à 95%).
+
+Un des 6 cas de test officiels (Multi Cross, un motif en damier fin) reste malgré tout une limite connue du RBF tel qu'il est implémenté ici : le sigma reste une seule valeur par centroïde calculée globalement, trop grossière pour distinguer les bandes fines de ce damier précis, peu importe le nombre de clusters ou d'epochs (testé jusqu'à k=60, epochs=1500). Les 5 autres cas de test et le dataset réel, eux, fonctionnent bien.
 
 # Sous-apprentissage, sur-apprentissage et biais du dataset
 
@@ -290,3 +299,15 @@ tanh: ses sorties oscillent entre -1 et 1.
 La principale différence entre la fonction tanh (tangente hyperbolique) et la fonction sigmoïde réside dans leur plage de valeurs de sortie et leur centrage sur zéro. 
 
 ![hey2](./img-readme/tanh:sigmoïde.png)
+
+
+
+# UTILS 
+
+gcc -shared -fPIC ETAPE5.RBNF.c utils.c -o ETAPE5.RBNF.so
+
+-shared : créer une bibliothèque partagée
+Au lieu de créer un programme exécutable classique, cette option demande à gcc de créer une bibliothèque que d'autres programmes peuvent charger, par exemple Python avec ctypes.
+
+-fPIC : générer du code indépendant de sa position
+PIC signifie Position-Independent Code. En gros, cela permet au code compilé de fonctionner même si le système charge la bibliothèque à une adresse mémoire différente selon le programme. C'est couramment utilisé pour créer des bibliothèques partagées.

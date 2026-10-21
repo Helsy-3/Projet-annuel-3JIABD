@@ -197,7 +197,7 @@ def courbe_apprentissage_rbf(X_train, y_train, X_test, y_test, k=10):
             y_bin = np.where(y_train == c, 1, -1).astype(float)
             poids = np.zeros(k)
             with e5.silencieux():
-                e5.lib.train_weights(k, n, d, X_train_c.ctypes.data_as(e5.P_DOUBLE),
+                e5.lib.recursive_train_weights(k, n, d, X_train_c.ctypes.data_as(e5.P_DOUBLE),
                                      y_bin.ctypes.data_as(e5.P_DOUBLE),
                                      centroids.ctypes.data_as(e5.P_DOUBLE), sigma,
                                      poids.ctypes.data_as(e5.P_DOUBLE), 0.01, epochs)

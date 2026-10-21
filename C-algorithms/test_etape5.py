@@ -56,8 +56,8 @@ lib.find_centroids.restype = None  # void en C -> None cote ctypes
 lib.assign_clusters.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_INT, P_INT]
 lib.assign_clusters.restype = None
 
-lib.update_centroids_mean.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
-lib.update_centroids_mean.restype = None
+lib.update_centroids.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_INT, P_INT, P_DOUBLE]
+lib.update_centroids.restype = None
 
 # ETAPE 3 : sigma = largeur des gaussiennes (distance moyenne entre les centroides)
 lib.calculer_sigma.argtypes = [ctypes.c_int, ctypes.c_int, P_DOUBLE]
@@ -69,13 +69,13 @@ lib.calculer_rbf_closeness_to_centroid.argtypes = [ctypes.c_int, P_DOUBLE, ctype
 lib.calculer_rbf_closeness_to_centroid.restype = None
 
 # ETAPE 5 : apprend les poids (un par centroide) par descente de gradient
-lib.train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
+lib.recursive_train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
                                ctypes.c_double, P_DOUBLE, ctypes.c_double, ctypes.c_int]
-lib.train_weights.restype = None
+lib.recursive_train_weights.restype = None
 
 # ETAPE 6 : prediction finale = somme ponderee des proximites (voir calculer_rbf_closeness_to_centroid)
-lib.calculer_output.argtypes = [ctypes.c_int, P_DOUBLE, P_DOUBLE]
-lib.calculer_output.restype = ctypes.c_double
+lib.calculer_dot_output.argtypes = [ctypes.c_int, P_DOUBLE, P_DOUBLE]
+lib.calculer_dot_output.restype = ctypes.c_double
 
 # Sauvegarde/chargement : centroides + sigma + poids dans un fichier texte simple
 lib.rbf_sauvegarder.argtypes = [ctypes.c_char_p, P_DOUBLE, ctypes.c_double, P_DOUBLE, ctypes.c_int, ctypes.c_int]
@@ -101,7 +101,7 @@ class RBF:
         for _ in range(100):  # K-MEANS : on stabilise les centroides
             lib.assign_clusters(k, n, d, X.ctypes.data_as(P_DOUBLE), centroids.ctypes.data_as(P_DOUBLE),
                                  clusters.ctypes.data_as(P_INT), tailles.ctypes.data_as(P_INT))
-            lib.update_centroids_mean(k, n, d, X.ctypes.data_as(P_DOUBLE), clusters.ctypes.data_as(P_INT),
+            lib.update_centroids(k, n, d, X.ctypes.data_as(P_DOUBLE), clusters.ctypes.data_as(P_INT),
                                        tailles.ctypes.data_as(P_INT), centroids.ctypes.data_as(P_DOUBLE))
         return centroids
 
@@ -127,7 +127,7 @@ class RBF:
                 sigma = lib.calculer_sigma(k, d, centroids.ctypes.data_as(P_DOUBLE))
                 poids = np.zeros(k)
                 with silencieux():  # train_weights fait un printf() par epoch, on l'etouffe
-                    lib.train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
+                    lib.recursive_train_weights(k, n, d, X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_DOUBLE),
                                        centroids.ctypes.data_as(P_DOUBLE), sigma,
                                        poids.ctypes.data_as(P_DOUBLE), self.learning_rate, self.epochs)
                 self.k, self.centroids, self.sigma, self.poids = k, centroids, sigma, poids
@@ -154,7 +154,7 @@ class RBF:
             lib.calculer_rbf_closeness_to_centroid(d, point.ctypes.data_as(P_DOUBLE), self.k,
                                                      self.centroids.ctypes.data_as(P_DOUBLE), self.sigma,
                                                      proximite.ctypes.data_as(P_DOUBLE))
-            sorties[i] = lib.calculer_output(self.k, proximite.ctypes.data_as(P_DOUBLE),
+            sorties[i] = lib.calculer_dot_output(self.k, proximite.ctypes.data_as(P_DOUBLE),
                                               self.poids.ctypes.data_as(P_DOUBLE))
         return sorties
 
