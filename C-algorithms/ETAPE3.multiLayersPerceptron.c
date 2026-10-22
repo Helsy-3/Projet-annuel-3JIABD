@@ -75,10 +75,27 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     }
 }
 
+void calculer_derivee_partielle(int layer_before_length, int current_layer_length, double *current_layer_neurones, double *neurone_layer_before, double *output_layer, double *before_layer_weight, double *before_layer_bias){
+
+}
+
 
 /* Rétropropagation : calcul des erreurs et mise à jour des poids. */
-int backpropagation_to_every_layer(double **neurones_by_layer_array,int nb_couches, int nb_neurones_par_couches[], double **weights, double **bias_array, int target_class, double learning_rate){
+int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couches, int nb_neurones_par_couches[], double **weights, double **bias_array, int target_class, double learning_rate){
 
+    for(int current_couche = nb_couches-1; current_couche >= 0; current_couche --){
+        double *current_layer = neurones_by_layer_array[couche];
+        double *layer_before = neurones_by_layer_array[couche-1];
+        int current_layer_length = 
+        int layer_before_length = 
+        double output_layer = 
+        int output_length =current_layer_length;
+        int couche_output = calculer_single_layer_output(layer_before_length, current_layer_length, current_layer, layer_before, output_layer, output_length);
+
+        // calculer l'erreur
+        int error_output = sqrt(couche_output - predicitions[current_couche]);
+        int derivee_partielle = calculer_derivee_partielle();
+    }
 }
 
 
