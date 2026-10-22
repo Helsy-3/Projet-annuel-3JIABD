@@ -5,12 +5,15 @@
 #include "utils.h"
 
 /*  INIT PHASE */
-double *init_biais(int neurones_layer_number){
-    double *bias_array = malloc(neurones_layer_number * sizeof(double));
+
+double *init_biais(int input_length, int neurones_layer_number){
+    int bias_number = input_length * neurones_layer_number;
+    double *bias_array = malloc(bias_number * sizeof(double));
     if (bias_array == NULL)
         return NULL;
-    for (int i = 0; i < neurones_layer_number; i++){
-        bias_array[i] = 0.0;
+
+    for (int i = 0; i < bias_number; i++){
+        bias_array[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
     }
     return bias_array;
 }
@@ -104,21 +107,20 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     }
 }
 
-double calculer_derivee_partielle_poids(double neurone_layer_before)
+double calculer_derivee_partielle(double neurone_layer_before)
 {
     return neurone_layer_before;
 }
 
-void update_before_layer_weights(int before_layer_index, double **all_weights, int nb_poids, double learning_rate, double *erreurs, double *neurones_layer_before, int layer_before_length)
+void update_before_layer_weights(int before_layer_index, double **all_weights, int nb_poids, double learning_rate, double *error_by_neurone_array, double *neurones_layer_before, int layer_before_length)
 {
-
     for (int neurone = 0; neurone < nb_poids; neurone++)
     {
         int neurone_index = neurone / layer_before_length;
         int before_neurone_index = neurone % layer_before_length;
         double before_weight = all_weights[before_layer_index][neurone];
-        double derivee_partielle = calculer_derivee_partielle_poids(neurones_layer_before[before_neurone_index]);
-        double new_before_weight = before_weight - learning_rate * erreurs[neurone_index] * derivee_partielle;
+        double derivee_partielle = calculer_derivee_partielle(neurones_layer_before[before_neurone_index]);
+        double new_before_weight = before_weight - learning_rate * error_by_neurone_array[neurone_index] * derivee_partielle;
         all_weights[before_layer_index][neurone] = new_before_weight;
     }
 }
