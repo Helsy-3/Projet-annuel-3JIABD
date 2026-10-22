@@ -1,12 +1,6 @@
 #include <math.h>
 #include "utils.h"
 
-void init_pmc_poids(double *weight_array, int weight_array_length){
-    for (int i = 0; i < weight_array_length; i++){
-        weight_array[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
-    }
-}
-
 double euclidean_distance(double *dot,double *centroid, int dataset_columns)
 {
 double total =0.0;
