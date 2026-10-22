@@ -62,7 +62,7 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     for (int neurone_index = 0; neurone_index < current_layer_length; neurone_index++){
         double current_neurone_output = before_layer_bias[neurone_index];
 
-            // output = w[1]* neurone_layer_before[1] +  w[2]* neurone_layer_before[2] + w[3]* neurone_layer_before[3]
+            // output = w[1] * neurone_layer_before[1] +  w[2] * neurone_layer_before[2] + w[3] * neurone_layer_before[3]
         for (int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index++){
             int poids_index = neurone_index * layer_before_length + neurone_before_index;
             current_neurone_output += neurone_layer_before[neurone_before_index] * before_layer_weight[poids_index];
@@ -86,20 +86,26 @@ void update_before_layer_weights(int before_layer_index, double **all_weights, i
 }
 
 /* Rétropropagation : calcul des erreurs et mise à jour des poids. */
-int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couches, int nb_neurones_par_couches[], double **weights, double **bias_array, int target_class, double learning_rate){
+int backpropagation_to_every_layer(double **neurones_by_layer_array, double *output_layer, int nb_couches, int nb_neurones_par_couches[], double **weights, double **bias_array, int target_class, double learning_rate, double *predictions_by_couche){
+    
+    // rétropropagation: recurively going from last layer to first layer
 
     for(int current_couche = nb_couches -1; current_couche >= 0; current_couche --){
-        double *current_layer = neurones_by_layer_array[couche];
-        double *layer_before = neurones_by_layer_array[couche-1];
-        int current_layer_length = 
-        int layer_before_length = 
-        double output_layer = 
-        int output_length =current_layer_length;
-        int couche_output = calculer_single_layer_output(layer_before_length, current_layer_length, current_layer, layer_before, output_layer, output_length);
+        
+        double *current_layer = neurones_by_layer_array[current_couche];
+        double *layer_before = neurones_by_layer_array[current_couche-1];
+        
+        int current_layer_length = nb_neurones_par_couches[current_couche];
+        int layer_before_length = nb_neurones_par_couches[current_couche -1];
+
+        int output_length = current_layer_length;
+        calculer_single_layer_output(layer_before_length, current_layer_length, current_layer, layer_before, output_layer, weights[current_couche -1], bias_array[current_couche -1]);
 
         // calculer l'erreur
-        int error_output = sqrt(couche_output - predicitions[current_couche]);
+        int error_output = sqrt(output_layer - predictions_by_couche[current_couche]);
+        // calculer la dérivée partielle
         int derivee_partielle = calculer_derivee_partielle(layer_before);
+        // mettre à jour les poids
         update_before_layer_weights(current_couche-1, weights, learning_rate, error_output);
     }
 }
