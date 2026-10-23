@@ -5,45 +5,46 @@
 #include "utils.h"
 
 /*  INIT PHASE */
-
-double *init_biais(int input_length, int neurones_layer_number){
+double *init_biais(int input_length, int neurones_layer_number)
+{
     int bias_number = input_length * neurones_layer_number;
     double *bias_array = malloc(bias_number * sizeof(double));
     if (bias_array == NULL)
         return NULL;
 
-    for (int i = 0; i < bias_number; i++){
+    for (int i = 0; i < bias_number; i++)
+    {
         bias_array[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
     }
     return bias_array;
 }
 
-double *init_poids(int input_length, int neurones_layer_number){
+double *init_poids_by_layer(int input_length, int neurones_layer_number)
+{
     int weight_number = input_length * neurones_layer_number;
     double *weight_array = malloc(weight_number * sizeof(double));
     if (weight_array == NULL)
         return NULL;
 
-    for (int i = 0; i < weight_number; i++){
+    for (int i = 0; i < weight_number; i++)
+    {
         weight_array[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
     }
     return weight_array;
 }
 
-// créer une matrice lignes x colonnes pour recevoir les couches cachées et le nombre de neurones par couches. allouer de l'espace en mémoire 
-int init_couches_cachees(int nb_couches, int nb_neurones_par_couches[], double **hidden_neurones_by_layer_array)
+// créer une matrice lignes x colonnes pour recevoir les couches cachées et le nombre de neurones par couches. allouer de l'espace en mémoire
+int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[], double **hidden_neurones_by_layer_array)
 {
     for (int couche = 0; couche < nb_couches; couche++)
     {
         hidden_neurones_by_layer_array[couche] = malloc(nb_neurones_par_couches[couche] * sizeof(double));
-
         if (hidden_neurones_by_layer_array[couche] == NULL)
         {
             for (int couche_a_liberer = 0; couche_a_liberer < couche; couche_a_liberer++)
             {
                 free(hidden_neurones_by_layer_array[couche_a_liberer]);
             }
-
             return -1;
         }
     }
@@ -58,8 +59,8 @@ int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par
         biases[couche_index] = NULL;
         int nb_neurones_before_layer = nb_neurones_par_couche[couche_index];
         int nb_neurones_current_layer = nb_neurones_par_couche[couche_index + 1];
-        weights[couche_index] = init_poids(nb_neurones_before_layer, nb_neurones_current_layer);
-        biases[couche_index] = init_biais(nb_neurones_current_layer);
+        weights[couche_index] = init_poids_by_layer(nb_neurones_before_layer, nb_neurones_current_layer);
+        biases[couche_index] = init_biais_by_layer(nb_neurones_current_layer);
         if (weights[couche_index] == NULL || biases[couche_index] == NULL)
             return 1;
     }
@@ -67,16 +68,15 @@ int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par
 }
 
 /*  PMC - CORE FUNCTIONS  */
-int find_strongest_class_by_neurone_score(double *final_output, int output_length)
+int find_strongest_category_by_neurone_score(double *couche_sortie, int output_length)
 {
-    if (final_output == NULL || output_length <= 0)
+    if (couche_sortie == NULL || output_length <= 0)
         return -1;
-
     int promising_neurone_index = 0;
 
     for (int neurone = 1; neurone < output_length; neurone++)
     {
-        if (final_output[neurone] > final_output[promising_neurone_index])
+        if (couche_sortie[neurone] > couche_sortie[promising_neurone_index])
         {
             promising_neurone_index = neurone;
         }
@@ -91,15 +91,13 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     {
         double current_neurone_output = before_layer_bias[neurone_index];
 
-        // Calcul de la somme pondérée
+        // un neurone reçoit la somme pondérée de tous les autres neurones multipliés par leur poids
         for (int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index++)
         {
             int poids_index = neurone_index * layer_before_length + neurone_before_index;
             current_neurone_output += neurone_layer_before[neurone_before_index] * before_layer_weight[poids_index];
         }
-
         current_layer_neurones[neurone_index] = current_neurone_output;
-
         if (output_layer != NULL)
         {
             output_layer[neurone_index] = current_neurone_output;
@@ -146,12 +144,9 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
         return -1;
     }
 
-    /* Étape 1 : allouer les erreurs de chaque couche. */
     double **erreurs_by_layer = malloc(nb_couches * sizeof(double *));
-
     if (erreurs_by_layer == NULL)
         return -1;
-
     for (int couche = 0; couche < nb_couches; couche++)
     {
         erreurs_by_layer[couche] = NULL;
@@ -159,8 +154,7 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
 
     for (int couche = 1; couche < nb_couches; couche++)
     {
-        erreurs_by_layer[couche] =
-            malloc(nb_neurones_par_couches[couche] * sizeof(double));
+        erreurs_by_layer[couche] = malloc(nb_neurones_par_couches[couche] * sizeof(double));
 
         if (erreurs_by_layer[couche] == NULL)
         {
@@ -176,7 +170,7 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
         }
     }
 
-    /* Étape 2 : Mettre à jour les erreurs de la couche de sortie. */
+    /* Étape 2 : Calculer l'erreur de la couche de sortie. */
     int derniere_couche = nb_couches - 1;
     for (int neurone = 0; neurone < output_length; neurone++)
     {
@@ -185,26 +179,30 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
     }
 
     /* Étape 3 : Propager les erreurs vers les couches cachées. */
+    /* À chaque itération, on calcule l'erreur de la couche actuelle (current_couche)
+    en utilisant l'erreur de la couche suivante (current_couche + 1). */
+
     for (int current_couche = nb_couches - 2; current_couche >= 1; current_couche--)
     {
-
         int current_layer_length = nb_neurones_par_couches[current_couche];
         int next_layer_length = nb_neurones_par_couches[current_couche + 1];
         for (int neurone = 0; neurone < current_layer_length; neurone++)
         {
-            double erreur = 0.0;
+            double current_layer_error = 0.0;
             for (int neurone_suivant = 0; neurone_suivant < next_layer_length; neurone_suivant++)
             {
                 int poids_index = neurone_suivant * current_layer_length + neurone;
-                erreur += weights[current_couche][poids_index] * erreurs_by_layer[current_couche + 1][neurone_suivant];
+                int next_layer = current_couche + 1;
+                current_layer_error += weights[current_couche][poids_index] * erreurs_by_layer[next_layer][neurone_suivant];
             }
 
-            erreurs_by_layer[current_couche][neurone] = erreur;
+            erreurs_by_layer[current_couche][neurone] = current_layer_error;
         }
     }
 
     /* Étape 4 : mettre à jour les poids et les biais. */
-    for (int couche = 0; couche < nb_couches - 1; couche++){
+    for (int couche = 0; couche < nb_couches - 1; couche++)
+    {
 
         int layer_before_length = nb_neurones_par_couches[couche];
         int current_layer_length = nb_neurones_par_couches[couche + 1];
@@ -316,7 +314,7 @@ int exec_PMC(double *dataset, int dataset_length, int *predictions_by_categories
             calculer_single_layer_output(nb_neurones_par_couches[couche_index - 1], nb_neurones_par_couches[couche_index], neurones_by_layer_array[couche_index], neurones_by_layer_array[couche_index - 1], NULL, weights[couche_index - 1], biases[couche_index - 1]);
         }
 
-        if (find_strongest_class_by_neurone_score(neurones_by_layer_array[nb_couches - 1], output_length) == predictions_by_categories[picture])
+        if (find_strongest_category_by_neurone_score(neurones_by_layer_array[nb_couches - 1], output_length) == predictions_by_categories[picture])
         {
             bonnes_predictions++;
         }
@@ -331,12 +329,14 @@ int exec_PMC(double *dataset, int dataset_length, int *predictions_by_categories
     return bonnes_predictions;
 }
 
-int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases){
+int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases)
+{
     if (chemin == NULL ||
         nb_neurones_par_couches == NULL ||
         weights == NULL ||
         biases == NULL ||
-        nb_couches < 2){
+        nb_couches < 2)
+    {
         return -1;
     }
 
@@ -348,8 +348,10 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
     fprintf(f, "%d\n", nb_couches);
 
     /* Sauvegarder la taille de chaque couche. */
-    for (int couche = 0; couche < nb_couches; couche++){
-        if (nb_neurones_par_couches[couche] <= 0){
+    for (int couche = 0; couche < nb_couches; couche++)
+    {
+        if (nb_neurones_par_couches[couche] <= 0)
+        {
             fclose(f);
             return -1;
         }
@@ -360,25 +362,29 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
     fprintf(f, "\n");
 
     /* Sauvegarder les poids et les biais de chaque couche. */
-    for (int couche = 0; couche < nb_couches - 1; couche++){
+    for (int couche = 0; couche < nb_couches - 1; couche++)
+    {
 
         int nb_neurones_before = nb_neurones_par_couches[couche];
         int nb_neurones_current = nb_neurones_par_couches[couche + 1];
 
-        if (weights[couche] == NULL || biases[couche] == NULL){
+        if (weights[couche] == NULL || biases[couche] == NULL)
+        {
             fclose(f);
             return -1;
         }
 
         int nb_poids = nb_neurones_before * nb_neurones_current;
 
-        for (int i = 0; i < nb_poids; i++){
+        for (int i = 0; i < nb_poids; i++)
+        {
             fprintf(f, "%.17g ", weights[couche][i]);
         }
 
         fprintf(f, "\n");
 
-        for (int i = 0; i < nb_neurones_current; i++){
+        for (int i = 0; i < nb_neurones_current; i++)
+        {
             fprintf(f, "%.17g ", biases[couche][i]);
         }
 
@@ -391,12 +397,14 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
     return 0;
 }
 
-int pmc_charger(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases){
+int pmc_charger(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases)
+{
     if (chemin == NULL ||
         nb_neurones_par_couches == NULL ||
         weights == NULL ||
         biases == NULL ||
-        nb_couches < 2){
+        nb_couches < 2)
+    {
         return -1;
     }
 
@@ -408,46 +416,55 @@ int pmc_charger(const char *chemin, int nb_couches, int nb_neurones_par_couches[
     int nb_couches_fichier;
 
     if (fscanf(f, "%d", &nb_couches_fichier) != 1 ||
-        nb_couches_fichier != nb_couches){
+        nb_couches_fichier != nb_couches)
+    {
         fclose(f);
         return -1;
     }
 
     /* Vérifier les dimensions de toutes les couches. */
-    for (int couche = 0; couche < nb_couches; couche++){
+    for (int couche = 0; couche < nb_couches; couche++)
+    {
 
         int dimension_fichier;
 
         if (fscanf(f, "%d", &dimension_fichier) != 1 ||
             dimension_fichier != nb_neurones_par_couches[couche] ||
-            dimension_fichier <= 0){
+            dimension_fichier <= 0)
+        {
             fclose(f);
             return -1;
         }
     }
 
     /* Charger les poids et les biais de chaque couche. */
-    for (int couche = 0; couche < nb_couches - 1; couche++){
+    for (int couche = 0; couche < nb_couches - 1; couche++)
+    {
 
         int nb_neurones_before = nb_neurones_par_couches[couche];
         int nb_neurones_current = nb_neurones_par_couches[couche + 1];
 
         int nb_poids = nb_neurones_before * nb_neurones_current;
 
-        if (weights[couche] == NULL || biases[couche] == NULL){
+        if (weights[couche] == NULL || biases[couche] == NULL)
+        {
             fclose(f);
             return -1;
         }
 
-        for (int i = 0; i < nb_poids; i++){
-            if (fscanf(f, "%lf", &weights[couche][i]) != 1){
+        for (int i = 0; i < nb_poids; i++)
+        {
+            if (fscanf(f, "%lf", &weights[couche][i]) != 1)
+            {
                 fclose(f);
                 return -1;
             }
         }
 
-        for (int i = 0; i < nb_neurones_current; i++){
-            if (fscanf(f, "%lf", &biases[couche][i]) != 1){
+        for (int i = 0; i < nb_neurones_current; i++)
+        {
+            if (fscanf(f, "%lf", &biases[couche][i]) != 1)
+            {
                 fclose(f);
                 return -1;
             }
