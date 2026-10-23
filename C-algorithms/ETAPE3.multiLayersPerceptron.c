@@ -123,18 +123,18 @@ void update_before_layer_weights(int before_layer_index, double **all_weights, i
     }
 }
 
-void update_before_layer_bias(int before_layer_index, double **all_biases, int nb_biases, double learning_rate, double *erreurs)
+void update_before_layer_bias(int before_layer_index, double **all_biases, int nb_biases, double learning_rate, double *erreurs_by_layer)
 {
     for (int i = 0; i < nb_biases; i++)
     {
-        all_biases[before_layer_index][i] -= learning_rate * erreurs[i];
+        all_biases[before_layer_index][i] -= learning_rate * erreurs_by_layer[i];
     }
 }
 
-int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couches, int nb_neurones_par_couches[], double **weights, double **bias_array, int target_class, double learning_rate)
+int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases_array, int target_class, double learning_rate)
 {
 
-    if (neurones_by_layer_array == NULL || nb_neurones_par_couches == NULL || weights == NULL || bias_array == NULL || nb_couches < 2 || learning_rate <= 0.0)
+    if (neurones_by_layer_array == NULL || nb_neurones_par_couches == NULL || weights == NULL || biases_array == NULL || nb_couches < 2 || learning_rate <= 0.0)
     {
         return -1;
     }
@@ -178,8 +178,7 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
         erreurs_by_layer[derniere_couche][neurone] = neurones_by_layer_array[derniere_couche][neurone] - cible;
     }
 
-    /* Étape 3 : Propager les erreurs vers les couches cachées. */
-    /* À chaque itération, on calcule l'erreur de la couche actuelle (current_couche)
+    /* Étape 3 : Propager les erreurs vers les couches cachées. À chaque itération, on calcule l'erreur de la couche actuelle (current_couche)
     en utilisant l'erreur de la couche suivante (current_couche + 1). */
 
     for (int current_couche = nb_couches - 2; current_couche >= 1; current_couche--)
@@ -200,19 +199,22 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array, int nb_couc
         }
     }
 
-    /* Étape 4 : mettre à jour les poids et les biais. */
-    for (int couche = 0; couche < nb_couches - 1; couche++)
+    /* Étape 4 : mettre à jour les poids et les biais. 
+    On commence de la couche de départ.
+    */
+    for (int before_layer = 0; before_layer < nb_couches - 1; before_layer++)
     {
-
-        int layer_before_length = nb_neurones_par_couches[couche];
-        int current_layer_length = nb_neurones_par_couches[couche + 1];
+        int next_layer_index = before_layer +1;
+        int before_layer_index = before_layer;
+        int layer_before_length = nb_neurones_par_couches[before_layer];
+        int current_layer_length = nb_neurones_par_couches[next_layer_index];
         int nb_poids = layer_before_length * current_layer_length;
 
-        /* Mise à jour de tous les poids de la couche. */
-        update_before_layer_weights(couche, weights, nb_poids, learning_rate, erreurs_by_layer[couche + 1], neurones_by_layer_array[couche], layer_before_length);
+        /* Mise à jour de tous les poids entre les deux couches à l'aide de l'erreur de la couche d'arrivée (et non l'erreur de la couche de départ). */
+        update_before_layer_weights(before_layer_index, weights, nb_poids, learning_rate, erreurs_by_layer[next_layer_index], neurones_by_layer_array[next_layer], layer_before_length);
 
-        /* Mise à jour des biais de la couche. */
-        update_before_layer_bias(couche, bias_array, current_layer_length, learning_rate, erreurs_by_layer[couche + 1]);
+        /* Mise à jour des biais entre les deux couches à l'aide de l'erreur de la couche d'arrivée (et non l'erreur de la couche de départ). */
+        update_before_layer_bias(before_layer_index, biases_array, current_layer_length, learning_rate, erreurs_by_layer[next_layer]);
     }
 
     /* Étape 5 : libérer la mémoire des erreurs. */
