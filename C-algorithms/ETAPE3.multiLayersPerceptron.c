@@ -5,9 +5,9 @@
 #include "utils.h"
 
 /*  INIT PHASE */
-double *init_biais(int input_length, int neurones_layer_number)
+double *init_biais_by_layer(int input_length, int nb_neurones_current_layer)
 {
-    int bias_number = input_length * neurones_layer_number;
+    int bias_number = input_length * nb_neurones_current_layer;
     double *bias_array = malloc(bias_number * sizeof(double));
     if (bias_array == NULL)
         return NULL;
@@ -57,10 +57,12 @@ int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par
     {
         weights[couche_index] = NULL;
         biases[couche_index] = NULL;
-        int nb_neurones_before_layer = nb_neurones_par_couche[couche_index];
-        int nb_neurones_current_layer = nb_neurones_par_couche[couche_index + 1];
-        weights[couche_index] = init_poids_by_layer(nb_neurones_before_layer, nb_neurones_current_layer);
-        biases[couche_index] = init_biais_by_layer(nb_neurones_current_layer);
+        int current_couche = couche_index;
+        int next_couche = couche_index + 1;
+        int nb_neurones_before_layer = nb_neurones_par_couche[current_couche];
+        int nb_neurones_next_layer = nb_neurones_par_couche[next_couche];
+        weights[couche_index] = init_poids_by_layer(nb_neurones_before_layer, nb_neurones_next_layer);
+        biases[couche_index] = init_biais_by_layer(nb_neurones_before_layer, nb_neurones_next_layer);
         if (weights[couche_index] == NULL || biases[couche_index] == NULL)
             return 1;
     }
