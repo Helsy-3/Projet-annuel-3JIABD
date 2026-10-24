@@ -69,11 +69,8 @@ int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par
         if (nb_neurones_before <= 0 || nb_neurones_next <= 0)
             goto erreur;
 
-        weights[couche] =
-            init_poids_by_layer(nb_neurones_before, nb_neurones_next);
-
-        biases[couche] =
-            init_biais_by_layer(nb_neurones_next);
+        weights[couche] = init_poids_by_layer(nb_neurones_before, nb_neurones_next);
+        biases[couche] = init_biais_by_layer(nb_neurones_next);
 
         if (weights[couche] == NULL || biases[couche] == NULL)
             goto erreur;
@@ -93,7 +90,7 @@ erreur:
     return -1;
 }
 
-/*  PMC - CORE FUNCTIONS  */
+// PMC - CORE FUNCTIONS  
 int find_strongest_category_by_neurone_score(double *couche_sortie, int output_length){
     if (couche_sortie == NULL || output_length <= 0)
         return -1;
@@ -159,20 +156,24 @@ double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_L, do
     return gradient;
 }
 
-void update_before_layer_weights(int before_layer_index, double **weights_matrice, int nb_poids, double learning_rate, double *error_by_neurone_array, double *neurones_layer_before, int layer_before_length){
+void update_before_layer_weights(int before_layer_index, double **weights_matrice, int nb_poids, double learning_rate, double *derivees_loss_sortie_neurones, double *neurones_layer_before, int layer_before_length){
+    
     for (int poids = 0; poids < nb_poids; poids++){
         int current_neurone_index = poids / layer_before_length;
         int before_neurone_index = poids % layer_before_length;
-        double gradient = calculer_derivee_partielle_loss_par_rapport_au_poids(error_by_neurone_array[current_neurone_index], neurones_layer_before[before_neurone_index]);
+        // la dérivée de la Loss vaut = y^ - y
+
+        double derivee_L = derivees_loss_sortie_neurones[current_neurone_index];
+        double neurone_before = neurones_layer_before[before_neurone_index];
+
+        double gradient = calculer_derivee_partielle_loss_par_rapport_au_poids(derivee_L, neurone_before);
         weights_matrice[before_layer_index][poids] -= learning_rate * gradient;
     }
+
 }
 
-
-void update_before_layer_bias(int before_layer_index, double **all_biases, int nb_biases, double learning_rate, double *erreurs_by_layer)
-{
-    for (int i = 0; i < nb_biases; i++)
-    {
+void update_before_layer_bias(int before_layer_index, double **all_biases, int nb_biases, double learning_rate, double *erreurs_by_layer){
+    for (int i = 0; i < nb_biases; i++){
         all_biases[before_layer_index][i] -= learning_rate * erreurs_by_layer[i];
     }
 }
@@ -181,55 +182,42 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array,int nb_couch
     if (neurones_by_layer_array == NULL || nb_neurones_par_couches == NULL || weights == NULL || biases_array == NULL || nb_couches < 2 || !isfinite(learning_rate) || learning_rate <= 0.0){
         return -1;
     }
-
     int output_layer = nb_couches - 1;
     int output_length = nb_neurones_par_couches[output_layer];
-
     if (target_class < 0 || target_class >= output_length)
         return -1;
 
     // Étape 1 : allouer un tableau d'erreurs par couche.
     // La couche d'entrée n'a pas besoin d'un tableau d'erreurs pour mettre à jour les poids.
-
     double **erreurs_by_layer = calloc(nb_couches, sizeof(double *));
-
     if (erreurs_by_layer == NULL)
         return -1;
-
     for (int couche = 1; couche < nb_couches; couche++){
         if (nb_neurones_par_couches[couche] <= 0)
             goto erreur;
-
         erreurs_by_layer[couche] = malloc(nb_neurones_par_couches[couche] * sizeof(double));
-
         if (erreurs_by_layer[couche] == NULL)
             goto erreur;
     }
     
-     // Étape 2 : calculer l'erreur de sortie. Loss = 1/2 * (prediction - cible)^2
-     // dLoss/dPrediction = prediction - cible. Cette formule suppose une sortie linéaire.
+    // Étape 2 : calculer l'erreur de sortie. Loss = 1/2 * (prediction - cible)^2
+    // dLoss/dPrediction = prediction - cible. Cette formule suppose une sortie linéaire.
     for (int neurone = 0; neurone < output_length; neurone++){
         double cible = (neurone == target_class) ? 1.0 : 0.0;
         erreurs_by_layer[output_layer][neurone] = neurones_by_layer_array[output_layer][neurone] - cible;
     }
     
     // Étape 3 : propager les erreurs vers les couches cachées.
-    // delta[j] = somme_k (poids[j -> k] * delta_suivant[k]). Le réseau étant linéaire, la dérivée de l'activation vaut 1.
-     
+    // delta[j] = somme_k (poids[j -> k] * delta_suivant[k]). Le réseau étant linéaire, la dérivée de l'activation vaut 1. 
     for (int couche = nb_couches - 2; couche >= 1; couche--){
         int current_layer_length = nb_neurones_par_couches[couche];
         int next_layer_length = nb_neurones_par_couches[couche + 1];
 
         for (int neurone = 0; neurone < current_layer_length; neurone++){
             double erreur = 0.0;
-
             for (int next_neurone = 0; next_neurone < next_layer_length; next_neurone++){
-                
-                // Les poids sont indexés ainsi :
-                // index = neurone_destination * taille_source + neurone_source
-                 
+                // Les poids sont indexés ainsi : index = neurone_destination * taille_source + neurone_source
                 int poids_index = next_neurone * current_layer_length + neurone;
-
                 erreur += weights[couche][poids_index] * erreurs_by_layer[couche + 1][next_neurone];
             }
             erreurs_by_layer[couche][neurone] = erreur;
@@ -239,12 +227,10 @@ int backpropagation_to_every_layer(double **neurones_by_layer_array,int nb_couch
     
      // Étape 4 : mettre à jour les poids et les biais.
      // Important : toutes les erreurs ont été calculées AVANT de modifier les poids. On peut donc mettre à jour ici.
-     
     for (int couche = 0; couche < nb_couches - 1; couche++){
         int layer_before_length = nb_neurones_par_couches[couche];
         int current_layer_length = nb_neurones_par_couches[couche + 1];
         int nb_poids = layer_before_length * current_layer_length;
-
         if (weights[couche] == NULL || biases_array[couche] == NULL)
             goto erreur;
 
