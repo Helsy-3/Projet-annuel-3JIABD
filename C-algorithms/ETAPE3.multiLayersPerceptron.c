@@ -376,41 +376,27 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
     return 0;
 }
 
-int pmc_charger(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases)
-{
+int pmc_charger(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases){
     if (chemin == NULL ||
         nb_neurones_par_couches == NULL ||
         weights == NULL ||
         biases == NULL ||
-        nb_couches < 2)
-    {
+        nb_couches < 2){
         return -1;
     }
 
     FILE *f = fopen(chemin, "r");
-
     if (f == NULL)
         return -1;
-
     int nb_couches_fichier;
-
-    if (fscanf(f, "%d", &nb_couches_fichier) != 1 ||
-        nb_couches_fichier != nb_couches)
-    {
+    if (fscanf(f, "%d", &nb_couches_fichier) != 1 || nb_couches_fichier != nb_couches){
         fclose(f);
         return -1;
     }
 
-    /* Vérifier les dimensions de toutes les couches. */
-    for (int couche = 0; couche < nb_couches; couche++)
-    {
-
+    for (int couche = 0; couche < nb_couches; couche++){
         int dimension_fichier;
-
-        if (fscanf(f, "%d", &dimension_fichier) != 1 ||
-            dimension_fichier != nb_neurones_par_couches[couche] ||
-            dimension_fichier <= 0)
-        {
+        if (fscanf(f, "%d", &dimension_fichier) != 1 || dimension_fichier != nb_neurones_par_couches[couche] || dimension_fichier <= 0){
             fclose(f);
             return -1;
         }
@@ -469,34 +455,19 @@ int main(void){
     };
 
     int dataset_length = 3;    // Nombre d'exemples présents dans le dataset.
-    // Dataset contenant 3 exemples, chacun composé de 12 valeurs.
     double X[3][12] = {
         {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1},
         {0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1},
         {1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0}
     };
+    int dataset_classes[3] = {2, 0, 1};  // Classe correcte associée à chaque exemple du dataset. Le premier exemple appartient à la classe 2, le deuxième à la classe 0, et le troisième à la classe 1.
 
-    
-    // Classe correcte associée à chaque exemple du dataset.
-    // Le premier exemple appartient à la classe 2, le deuxième à la classe 0,
-    // et le troisième à la classe 1.
-    int vraies_classes[3] = {2, 0, 1};
-
-    // Réserve de la mémoire pour les pointeurs vers les tableaux de poids.
-    // Il y a nb_couches - 1 connexions entre les couches, donc 2 ici.
     double **weights = malloc((nb_couches - 1) * sizeof(double *));
-
-    // Réserve de la mémoire pour les pointeurs vers les tableaux de biais.
-    // Il faut un tableau de biais pour chaque couche après la couche d'entrée.
     double **biases = malloc((nb_couches - 1) * sizeof(double *));
 
-    // Vérifie si l'allocation de l'un des deux tableaux a échoué.
     if (weights == NULL || biases == NULL) {
-        // Libère le tableau de poids s'il a été alloué.
         free(weights);
-        // Libère le tableau de biais s'il a été alloué.
         free(biases);
-        // Termine le programme avec un code indiquant une erreur.
         return 1;
     }
 
@@ -507,7 +478,6 @@ int main(void){
             weights,                      // Tableaux destinés à recevoir les poids.
             biases) != 0) {               // Tableaux destinés à recevoir les biais.
 
-        // Parcourt les connexions entre les couches pour libérer leur mémoire.
         for (int i = 0; i < nb_couches - 1; i++) {
             free(weights[i]);
             free(biases[i]);
@@ -521,7 +491,7 @@ int main(void){
     int predictions = exec_PMC(
         (double *)X,                 // Exemples d'entrée, convertis en tableau 1D.
         dataset_length,               // Nombre d'exemples à traiter.
-        vraies_classes,               // Classes attendues pour les exemples.
+        dataset_classes,               // Classes attendues pour les exemples.
         nb_couches,                   // Nombre total de couches du réseau.
         nb_neurones_par_couches,       // Architecture du réseau : 12, 8, 3.
         weights,                      // Poids qui seront utilisés et modifiés.
@@ -531,9 +501,7 @@ int main(void){
     );
 
     // Affiche le nombre de prédictions correctes parmi les 3 exemples.
-    printf("Bonnes predictions : %d/%d\n",
-           predictions < 0 ? 0 : predictions,   // Affiche 0 si exec_PMC a renvoyé une erreur.
-           dataset_length);           // Affiche le nombre total d'exemples.
+    printf("Bonnes predictions : %d/%d\n", predictions < 0 ? 0 : predictions, dataset_length);          
 
     // Parcourt les connexions pour libérer les tableaux de poids et de biais.
     for (int i = 0; i < nb_couches - 1; i++) {
