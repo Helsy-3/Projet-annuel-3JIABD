@@ -65,32 +65,39 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 
 // ETAPE 4: Le sigma représente la somme des distances moyennes entre chaque centroïde et son voisin le PLUS PROCHE.
 // Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
- double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]){
-    
-    double sum_distance = 0.0; // somme des distances de chaque centroïde à son plus proche voisin
-
-    // EACH CENTROID
-    for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++){ // on parcourt tous les centroïdes
+double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]) {
+    double all_centroids_distances_to_closest_neighboor = 0.0;
+    for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++) {
         double min_centroid_distance = INFINITY;
-        
-        // FIND CURRENT CENTROID CLOSEST NEIGHBOOR
-        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++){ // on parcourt tous les voisins du centroïde courant
-            if (other_centroïd_index == current_centroïd_index) continue;
-            double squared_distance = 0.0;
-            for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++){ // parcourir toutes les dimensions des centroïdes
-                double difference = centroids_array[current_centroïd_index][vecteur_dimension] - centroids_array[other_centroïd_index][vecteur_dimension]; // Calculer la différence entre les coordonnées des deux centroïdes pour la dimension actuelle
-                squared_distance += difference * difference; // Élever cette différence au carré et l'ajouter à la somme des carrés des différences
+
+        // On cherche le voisin le plus proche
+        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++) {
+
+            // Un centroïde ne peut pas être son propre voisin
+            if (other_centroïd_index == current_centroïd_index)
+                continue;
+
+            double distance = 0.0;
+
+            // On parcourt toutes les dimensions
+            for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++) {
+
+                double difference = centroids_array[current_centroïd_index][vecteur_dimension] - centroids_array[other_centroïd_index][vecteur_dimension];
+                distance += fabs(difference);
             }
-            double distance_to_voisin_centroid = sqrt(squared_distance); // Calculer la distance euclidienne entre les deux centroïdes
-            if (distance_to_voisin_centroid < min_centroid_distance)
-                min_centroid_distance = distance_to_voisin_centroid; // On garde la plus petite distance : celle du plus proche voisin
+
+            // On conserve la plus petite distance
+            if (distance < min_centroid_distance) {
+                min_centroid_distance = distance;
+            }
         }
 
-        // ADD DISTANCE TO sum_distance
-        sum_distance += min_centroid_distance;
+        // On ajoute la distance au plus proche voisin à la somme
+        all_centroids_distances_to_closest_neighboor += min_centroid_distance;
     }
 
-    double sigma = sum_distance / K;
+    // On calcule la distance moyenne entre les centroïdes et leur plus proche voisin
+    double sigma = all_centroids_distances_to_closest_neighboor / K;
     return sigma;
 }
 
