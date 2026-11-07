@@ -1,5 +1,8 @@
 #include <math.h>
 #include "utils.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 double euclidean_distance(double *dot,double *centroid, int dataset_columns)
 {
@@ -63,4 +66,28 @@ double calculer_dot_output(int K, double dot_proximity_to_centroids[K], double w
         dot_output += weights[i] * dot_proximity_to_centroids[i];
     }
     return dot_output;
+}
+
+// Perceptron multi couche function
+int find_strongest_category_by_neurone_score(double *couche_sortie, int output_length)
+{
+    if (couche_sortie == NULL || output_length <= 0)
+        return -1;
+    int promising_neurone_index = 0;
+
+    for (int neurone_index = 1; neurone_index < output_length; neurone_index++)
+    {
+        if (couche_sortie[neurone_index] > couche_sortie[promising_neurone_index])
+        {
+            promising_neurone_index = neurone_index;
+        }
+    }
+    return promising_neurone_index;
+}
+
+double calculer_loss(double prediction, double cible)
+{
+    double difference = prediction - cible;
+    double loss = 0.5 * difference * difference;
+    return loss;
 }

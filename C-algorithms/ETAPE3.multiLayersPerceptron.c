@@ -10,20 +10,19 @@ double *init_biais_by_layer(int nb_neurones_current_layer)
     if (nb_neurones_current_layer <= 0)
         return NULL;
 
-    double *bias_array =
-        malloc(nb_neurones_current_layer * sizeof(double));
+    double *bias_array = malloc(nb_neurones_current_layer * sizeof(double));
 
     if (bias_array == NULL)
         return NULL;
 
-    for (int i = 0; i < nb_neurones_current_layer; i++)
-    {
+    for (int i = 0; i < nb_neurones_current_layer; i++){
         bias_array[i] = ((double)rand() / RAND_MAX - 0.5) * 0.2;
     }
 
     return bias_array;
 }
 
+/*  INIT PHASE */
 double *init_poids_by_layer(int input_length, int neurones_layer_number)
 {
     int weight_number = input_length * neurones_layer_number;
@@ -38,6 +37,7 @@ double *init_poids_by_layer(int input_length, int neurones_layer_number)
     return weight_array;
 }
 
+/*  INIT PHASE */
 // créer une matrice lignes x colonnes pour recevoir les couches cachées et le nombre de neurones par couches. allouer de l'espace en mémoire
 int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[], double **hidden_neurones_by_layer_array)
 {
@@ -56,6 +56,8 @@ int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[],
     return 0;
 }
 
+
+/*  INIT PHASE */
 int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par_couche[], double **weights, double **biases)
 {
     if (nb_couches < 2 || nb_neurones_par_couche == NULL || weights == NULL || biases == NULL)
@@ -93,23 +95,8 @@ erreur:
     return -1;
 }
 
-// PMC - CORE FUNCTIONS
-int find_strongest_category_by_neurone_score(double *couche_sortie, int output_length)
-{
-    if (couche_sortie == NULL || output_length <= 0)
-        return -1;
-    int promising_neurone_index = 0;
 
-    for (int neurone_index = 1; neurone_index < output_length; neurone_index++)
-    {
-        if (couche_sortie[neurone_index] > couche_sortie[promising_neurone_index])
-        {
-            promising_neurone_index = neurone_index;
-        }
-    }
-    return promising_neurone_index;
-}
-
+/* PROPAGATION PHASE */
 void calculer_single_layer_output(int layer_before_length, int current_layer_length, double *current_layer_neurones, double *neurone_layer_before, double *output_layer, double *before_layer_weight, double *before_layer_bias)
 {
     for (int neurone_index = 0; neurone_index < current_layer_length; neurone_index++)
@@ -117,28 +104,18 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
         double current_neurone_output = before_layer_bias[neurone_index];
 
         // un neurone reçoit la somme pondérée de tous les autres neurones multipliés par leur poids
-        for (int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index++)
-        {
+        for (int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index++){
             int poids_index = neurone_index * layer_before_length + neurone_before_index;
             current_neurone_output += neurone_layer_before[neurone_before_index] * before_layer_weight[poids_index];
         }
         current_layer_neurones[neurone_index] = current_neurone_output;
-        if (output_layer != NULL)
-        {
+        if (output_layer != NULL){
             output_layer[neurone_index] = current_neurone_output;
         }
     }
 }
 
-// ETAPE 1 : calculer la loss (écart entre la prédiction du réseau et la valeur attendue).
-// Formule = 1/2 * (prediction - cible)^2
-
-double calculer_loss(double prediction, double cible)
-{
-    double difference = prediction - cible;
-    double loss = 0.5 * difference * difference;
-    return loss;
-}
+/* BACK-PROPAGATION PHASE */
 
 // ETAPE 2 : calculer la dérivée partielle de la loss par rapport à un poids.
 // next_neurone = poids * neurone_before + biais
@@ -151,7 +128,7 @@ double calculer_loss(double prediction, double cible)
 double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_L, double neurone_before)
 {
 
-    // ETAPE 2A : calculer l'influence du poids sur le résultat du neurone.
+    // calculer l'influence du poids sur le résultat du neurone.
     // ^y = next_neurone = poids * neurone_before + biais
     // ^y = w * x + b
     // la dérivée de w * x par rapport à w vaut x, car x est considéré comme une constante.
