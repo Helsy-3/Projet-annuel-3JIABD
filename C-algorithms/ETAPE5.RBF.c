@@ -95,7 +95,7 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
 }
 
 // ETAPE 5 : Calculer la distance d'un point par rapport au centre avec RBF
-void calculer_dot_rbf_closeness_to_centroids(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
+void compute_dot_proximity_to_centroids(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K]){
     for (int centroid = 0; centroid < K; centroid++){ 
         double distance_carre = 0;
         
@@ -114,7 +114,7 @@ void recursive_train_weights(int K, int dataset_rows, int dataset_columns, doubl
     for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
         for (int i = 0; i < dataset_rows; i++) { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
-            calculer_dot_rbf_closeness_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+            compute_dot_proximity_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = targets[i] - output;
             total_error += error * error;
@@ -167,7 +167,7 @@ void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_row
     double dot_proximity_to_centroids[K]; //ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
     printf("\nResultats :\n");
     for (int i = 0; i < dataset_rows; i++){
-        calculer_dot_rbf_closeness_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+        compute_dot_proximity_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
         double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
         printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
