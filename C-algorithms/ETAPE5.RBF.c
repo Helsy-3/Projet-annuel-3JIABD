@@ -67,14 +67,14 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 // Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
 double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]) {
     double all_centroids_distances_to_closest_neighboor = 0.0;
-    for (int current_centroïd_index = 0; current_centroïd_index < K; current_centroïd_index++) {
+    for (int current_centroïd = 0; current_centroïd < K; current_centroïd++) {
         double min_centroid_distance = INFINITY;
 
         // On cherche le voisin le plus proche
-        for (int other_centroïd_index = 0; other_centroïd_index < K; other_centroïd_index++) {
+        for (int other_centroïd = 0; other_centroïd < K; other_centroïd++) {
 
             // Un centroïde ne peut pas être son propre voisin
-            if (other_centroïd_index == current_centroïd_index)
+            if (other_centroïd == current_centroïd)
                 continue;
 
             double distance = 0.0;
@@ -82,7 +82,7 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
             // On parcourt toutes les dimensions
             for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++) {
 
-                double difference = centroids_array[current_centroïd_index][vecteur_dimension] - centroids_array[other_centroïd_index][vecteur_dimension];
+                double difference = centroids_array[current_centroïd][vecteur_dimension] - centroids_array[other_centroïd][vecteur_dimension];
                 distance += fabs(difference);
             }
 
