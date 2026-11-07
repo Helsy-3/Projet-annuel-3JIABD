@@ -63,41 +63,34 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
     }
 }
 
-// ETAPE 4: Le sigma représente la somme des distances moyennes entre chaque centroïde et son voisin le PLUS PROCHE.
+// ETAPE 4: Le sigma représente la moyenne de la somme des distances entre chaque centroïde et son voisin le PLUS PROCHE.
 // Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
 double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns]) {
-    double all_centroids_distances_to_closest_neighboor = 0.0;
+    double distances_sum = 0.0;
     for (int current_centroïd = 0; current_centroïd < K; current_centroïd++) {
-        double min_centroid_distance = INFINITY;
-
-        // On cherche le voisin le plus proche
+        double min_neighboor_distance = INFINITY;
         for (int other_centroïd = 0; other_centroïd < K; other_centroïd++) {
-
-            // Un centroïde ne peut pas être son propre voisin
-            if (other_centroïd == current_centroïd)
+            if (other_centroïd == current_centroïd) // Ignorer soi-même
                 continue;
-
-            double distance = 0.0;
-
+            double neighboor_distance = 0.0;
             // On parcourt toutes les dimensions
             for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++) {
-
                 double difference = centroids_array[current_centroïd][vecteur_dimension] - centroids_array[other_centroïd][vecteur_dimension];
-                distance += fabs(difference);
+                neighboor_distance += fabs(difference);
             }
 
             // On conserve la plus petite distance
-            if (distance < min_centroid_distance) {
-                min_centroid_distance = distance;
+            if (neighboor_distance < min_neighboor_distance) {
+                min_neighboor_distance = neighboor_distance;
             }
         }
 
         // On ajoute la distance au plus proche voisin à la somme
-        all_centroids_distances_to_closest_neighboor += min_centroid_distance;
+        distances_sum += min_neighboor_distance;
     }
 
     // On calcule la distance moyenne entre les centroïdes et leur plus proche voisin
-    double sigma = all_centroids_distances_to_closest_neighboor / K;
+    double sigma = distances_sum / K;
     return sigma;
 }
 
