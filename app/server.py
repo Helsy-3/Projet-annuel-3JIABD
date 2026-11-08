@@ -13,7 +13,7 @@ DOSSIER = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(DOSSIER)
 
 CHEMIN_LIB = os.path.join(
-    RACINE, "C-algorithms", "ETAPE5.RBNF.so"
+    RACINE, "C-algorithms", "ETAPE5.RBF.so"
 )
 
 DOSSIER_MODELES = os.path.join(DOSSIER, "modeles")
@@ -42,7 +42,7 @@ lib.rbf_charger.argtypes = [
 lib.rbf_charger.restype = ctypes.c_int
 
 # Décrire les arguments de la fonction qui calcule les activations RBF.
-lib.calculer_rbf_closeness_to_centroid.argtypes = [
+lib.calculer_dot_rbf_closeness_to_centroids.argtypes = [
     ctypes.c_int,
     P_DOUBLE,
     ctypes.c_int,
@@ -50,7 +50,7 @@ lib.calculer_rbf_closeness_to_centroid.argtypes = [
     ctypes.c_double,
     P_DOUBLE
 ]
-lib.calculer_rbf_closeness_to_centroid.restype = None
+lib.calculer_dot_rbf_closeness_to_centroids.restype = None
 
 # Décrire les arguments de la fonction qui calcule le score final.
 # Le nom doit correspondre à celui défini dans ton fichier C.
@@ -153,7 +153,7 @@ def calculer_score(modele, vecteur):
     proximites = np.zeros(k, dtype=np.float64)
 
     # Calculer les activations RBF grâce à la fonction C.
-    lib.calculer_rbf_closeness_to_centroid(
+    lib.calculer_dot_rbf_closeness_to_centroids(
         dimensions,
         vecteur.ctypes.data_as(P_DOUBLE),
         k,

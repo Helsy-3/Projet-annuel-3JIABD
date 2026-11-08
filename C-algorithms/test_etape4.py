@@ -7,13 +7,19 @@ import numpy as np
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 NOM_LIB = "ETAPE4.svm.dll" if sys.platform.startswith("win") else "ETAPE4.svm.so"
+# ctypes.CDLL charge la bibliotheque .so (compilee avec gcc -shared -fPIC) : c'est ce qui
+# permet a Python d'appeler directement des fonctions ecrites en C.
 lib = ctypes.CDLL(os.path.join(DOSSIER, NOM_LIB))
 
 LINEAIRE, RBF = 0, 1
 
+# En C, un tableau est en realite un pointeur vers son 1er element. Cote Python, il faut
+# donc declarer le type "pointeur vers double/int" pour pouvoir passer un tableau numpy.
 P_DOUBLE = ctypes.POINTER(ctypes.c_double)
 P_INT = ctypes.POINTER(ctypes.c_int)
 
+# argtypes/restype : ctypes ne devine pas les types C tout seul, il faut les lui donner
+# explicitement pour chaque fonction - sinon les donnees peuvent etre mal converties.
 lib.svm_entrainer.argtypes = [P_DOUBLE, P_INT, ctypes.c_int, ctypes.c_int, ctypes.c_int,
                               ctypes.c_double, ctypes.c_double, ctypes.c_int, P_DOUBLE]
 lib.svm_entrainer.restype = ctypes.c_int
@@ -32,6 +38,9 @@ for nom in ("run_svm_lineaire", "run_svm_xor_lineaire", "run_svm_xor_rbf"):
 
 
 def ptr(tableau):
+    # .ctypes.data_as() donne au C l'adresse memoire du tableau numpy : le C et Python
+    # lisent/ecrivent dans la MEME memoire, pas de copie. C'est comme ca qu'on recupere
+    # les resultats calcules par le C (ex: coefs, rempli par svm_entrainer ci-dessous).
     return tableau.ctypes.data_as(P_DOUBLE)
 
 
@@ -42,9 +51,11 @@ class SVM:
         self.noyau, self.gamma, self.C, self.max_iter = noyau, gamma, C, max_iter
 
     def entrainer(self, X, y):
+        # ascontiguousarray : ctypes a besoin d'un bloc memoire contigu (pas de "trous"),
+        # ce que numpy ne garantit pas toujours selon comment le tableau a ete construit.
         self.X = np.ascontiguousarray(X, dtype=np.float64)
         y = np.ascontiguousarray(y, dtype=np.int32)
-        self.coefs = np.zeros(len(self.X))
+        self.coefs = np.zeros(len(self.X))  # tableau vide : svm_entrainer() va le remplir
         self.n_supports = lib.svm_entrainer(
             ptr(self.X), y.ctypes.data_as(P_INT), len(self.X), self.X.shape[1],
             self.noyau, self.gamma, self.C, self.max_iter, ptr(self.coefs))
@@ -77,7 +88,10 @@ class SVM:
 
 
 class SVMMultiClasse:
-    """Un contre tous : un SVM par classe, on garde la classe au score le plus haut."""
+    """Un contre tous : un SVM par classe, on garde la classe au score le plus haut.
+    Le SVM en C ne sait separer que 2 classes - le "un contre tous" est fait ici, cote
+    Python : ce n'est pas un nouvel algorithme, juste plusieurs appels a la meme fonction C
+    (une fois par classe, "est-ce cette classe, oui ou non ?")."""
 
     def __init__(self, **parametres):
         self.parametres = parametres

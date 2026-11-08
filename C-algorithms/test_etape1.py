@@ -45,15 +45,19 @@ class Perceptron:
         X = np.ascontiguousarray(X, dtype=np.float64)
         y = np.ascontiguousarray(y, dtype=np.int32)
         n_exemples, n_features = X.shape
-        self.poids = np.zeros(n_features)
-        self.biais = ctypes.c_double(0.0)
+        self.poids = np.zeros(n_features)       # un poids par caracteristique, rempli par le C
+        self.biais = ctypes.c_double(0.0)        # une seule valeur -> ctypes.c_double, pas un tableau numpy
         self.erreurs = lib.run_perceptron_dataset(
             X.ctypes.data_as(P_DOUBLE), y.ctypes.data_as(P_INT),
             n_exemples, n_features, self.learning_rate, self.max_iter,
-            self.poids.ctypes.data_as(P_DOUBLE), ctypes.byref(self.biais))
+            self.poids.ctypes.data_as(P_DOUBLE),
+            ctypes.byref(self.biais))  # byref() = "passe l'adresse de cette variable", equivalent
+                                        # du .ctypes.data_as() des tableaux mais pour une seule valeur
         return self
 
     def score(self, points):
+        # Le perceptron est juste une somme ponderee (produit matriciel) + un biais.
+        # score >= 0 -> classe 1, score < 0 -> classe -1 (voir predire() ci-dessous).
         points = np.ascontiguousarray(np.atleast_2d(points), dtype=np.float64)
         return points @ self.poids + self.biais.value
 

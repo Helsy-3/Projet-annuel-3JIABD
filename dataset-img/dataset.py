@@ -1,6 +1,5 @@
 """ api calls to retrieve big dataset """
 import os
-import time
 import requests
 
 
@@ -10,6 +9,8 @@ BASE_URL = "https://api.pexels.com/v1/search"
 HEADERS = {
     "Authorization": API_KEY
 }
+
+DOSSIER = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_bottle_images(query="glass bottle", per_page=80, max_pages=10):
@@ -55,6 +56,37 @@ def get_bottle_images(query="glass bottle", per_page=80, max_pages=10):
     return images
 
 
+def get_glass_images():
+    return get_bottle_images(query="glass jar", per_page=80, max_pages=10)
+
+
+def get_metal_images():
+    return get_bottle_images(query="metal can", per_page=80, max_pages=10)
+
+
+def get_plastic_images():
+    return get_bottle_images(query="plastic bottle", per_page=80, max_pages=10)
+
+
+def telecharger_images(images, categorie, proportion_test=0.2):
+    """Telecharge chaque photo (a partir de son URL 'medium') et la range directement
+    dans dataset-img/train/<categorie>/ ou dataset-img/test/<categorie>/ (~80%/20%,
+    comme separer_train_test() ailleurs dans le projet) - pas besoin d'un script a part
+    pour faire ce split, c'est fait ici au moment du telechargement."""
+    n_test = max(1, round(len(images) * proportion_test))
+    for i, image in enumerate(images, start=1):
+        sous_dossier = "test" if i <= n_test else "train"
+        dossier = os.path.join(DOSSIER, sous_dossier, categorie)
+        os.makedirs(dossier, exist_ok=True)
+
+        reponse = requests.get(image["medium"], timeout=30)
+        reponse.raise_for_status()
+        chemin = os.path.join(dossier, f"{i:02d}.jpg")
+        with open(chemin, "wb") as f:
+            f.write(reponse.content)
+        print(f"Image {i}/{len(images)} telechargee : {chemin}")
+
+
 if __name__ == "__main__":
 
     if not API_KEY:
@@ -62,21 +94,23 @@ if __name__ == "__main__":
             "Définis ta clé API dans la variable d'environnement PEXELS_API_KEY"
         )
 
-    images = get_bottle_images(
-        query="glass bottle",
-        per_page=80,
-        max_pages=10
-    )
+    categories = {
+        "verre": get_glass_images,
+        "metal": get_metal_images,
+        "plastic": get_plastic_images,
+    }
 
-    print(f"\nTotal : {len(images)} images")
+    resultats = {}
+    for nom, fonction_recuperation in categories.items():
+        print(f"\n=== {nom} ===")
+        resultats[nom] = fonction_recuperation()
+        print(f"Total : {len(resultats[nom])} images trouvees")
 
-    import json
+    # Classes equilibrees : on garde le meme nombre de photos par categorie (le plus
+    # petit nombre trouve), sinon un modele peut avoir une bonne precision juste en
+    # favorisant la classe la plus fournie, sans vraiment apprendre a distinguer les 3.
+    n_min = min(len(images) for images in resultats.values())
+    print(f"\nOn garde {n_min} photos par categorie pour avoir des classes equilibrees")
 
-    with open("bottle_images.json", "w", encoding="utf-8") as f:
-        json.dump(images, f, ensure_ascii=False, indent=2)
-
-
-def get_glass_images():
-
-
-def get_metal_images():
+    for nom, images in resultats.items():
+        telecharger_images(images[:n_min], nom)

@@ -264,11 +264,20 @@ int exec_PMC(double *dataset, int dataset_length, int *predictions_by_categories
         return -1;
     }
 
+<<<<<<< HEAD
     /* Étape 1 : initialiser les poids et les biais. */
     for (int couche_index = 0; couche_index < nb_couches - 1; couche_index++)
     {
         int nb_neurones_before = nb_neurones_par_couches[couche_index];
         int nb_neurones_current = nb_neurones_par_couches[couche_index + 1];
+=======
+// Entraînement complet. W1_sortie/b1_sortie/W2_sortie/b2_sortie sont des tableaux deja
+// alloues par Python : on y recopie les poids appris, pour que Python puisse les reutiliser
+// ensuite avec predire_pmc() sur des donnees jamais vues pendant l'entrainement (split train/test).
+int run_pmc_dataset(double *vecteurs, int *classes, int n_exemples,
+                    int in_dim, int h_dim, int out_dim, int epochs,
+                    double *W1_sortie, double *b1_sortie, double *W2_sortie, double *b2_sortie) {
+>>>>>>> main
 
         if (nb_neurones_before <= 0 || nb_neurones_current <= 0 || weights[couche_index] == NULL || biases[couche_index] == NULL)
         {
@@ -283,8 +292,12 @@ int exec_PMC(double *dataset, int dataset_length, int *predictions_by_categories
     /* Étape 2 : allouer les neurones de chaque couche. */
     double **neurones_by_layer_array = malloc(nb_couches * sizeof(double *));
 
+<<<<<<< HEAD
     if (neurones_by_layer_array == NULL)
         return -1;
+=======
+    double lr = 0.05;
+>>>>>>> main
 
     if (init_couches_cachees(nb_couches, nb_neurones_par_couches, neurones_by_layer_array) != 0)
     {
@@ -516,8 +529,14 @@ int main(void)
         {1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0}};
     int dataset_classes[3] = {2, 0, 1}; // Classe correcte associée à chaque exemple du dataset. Le premier exemple appartient à la classe 2, le deuxième à la classe 0, et le troisième à la classe 1.
 
+<<<<<<< HEAD
     double **weights = malloc((nb_couches - 1) * sizeof(double *));
     double **biases = malloc((nb_couches - 1) * sizeof(double *));
+=======
+    double W1[12 * 8], b1[8], W2[8 * 3], b2[3];
+    int bonnes = run_pmc_dataset((double*)X, vraies_classes, n_exemples, in_dim, h_dim, out_dim, 10000,
+                                  W1, b1, W2, b2);
+>>>>>>> main
 
     if (weights == NULL || biases == NULL)
     {
