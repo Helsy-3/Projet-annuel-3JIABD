@@ -23,9 +23,12 @@ double *init_biais_by_layer(int nb_neurones_current_layer)
 }
 
 /*  INIT PHASE */
-double *init_poids_by_layer(int input_length, int neurones_layer_number)
-{
-    int weight_number = input_length * neurones_layer_number;
+double *init_poids_by_layer(int before_layer_neurones_number, int next_layer_neurones_number){
+    int weight_number = 0;
+    // chaque neurone de la couche suivante est connecté à tous les neurones de la couche précédente 
+    for (int w = 0; w < next_layer_neurones_number; w ++){
+        weight_number += before_layer_neurones_number;
+    }
     double *weight_array = malloc(weight_number * sizeof(double));
     if (weight_array == NULL)
         return NULL;
