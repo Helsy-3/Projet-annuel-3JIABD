@@ -42,16 +42,16 @@ double *init_poids_by_layer(int before_layer_neurones_number, int next_layer_neu
 
 /*  INIT PHASE */
 // créer une matrice lignes x colonnes pour recevoir les couches cachées et le nombre de neurones par couches. allouer de l'espace en mémoire
-int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[], double **hidden_neurones_by_layer_array)
+int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[], double **neurones_by_layer_array)
 {
     for (int couche = 0; couche < nb_couches; couche++)
     {
-        hidden_neurones_by_layer_array[couche] = malloc(nb_neurones_par_couches[couche] * sizeof(double));
-        if (hidden_neurones_by_layer_array[couche] == NULL)
+        neurones_by_layer_array[couche] = malloc(nb_neurones_par_couches[couche] * sizeof(double));
+        if (neurones_by_layer_array[couche] == NULL)
         {
             for (int couche_a_liberer = 0; couche_a_liberer < couche; couche_a_liberer++)
             {
-                free(hidden_neurones_by_layer_array[couche_a_liberer]);
+                free(neurones_by_layer_array[couche_a_liberer]);
             }
             return -1;
         }
@@ -102,35 +102,27 @@ erreur:
 /* PROPAGATION PHASE */
 void calculer_single_layer_output(int layer_before_length, int current_layer_length, double *current_layer_neurones, double *neurone_layer_before, double *output_layer, double *before_layer_weight, double *before_layer_bias)
 {
-    for (int neurone_index = 0; neurone_index < current_layer_length; neurone_index++)
+    for (int current_neurone_index = 0; current_neurone_index < current_layer_length; current_neurone_index++)
     {
-        double current_neurone_output = before_layer_bias[neurone_index];
-
+        double current_neurone_output = before_layer_bias[current_neurone_index];
         // un neurone reçoit la somme pondérée de tous les autres neurones multipliés par leur poids
         for (int neurone_before_index = 0; neurone_before_index < layer_before_length; neurone_before_index++){
-            int poids_index = neurone_index * layer_before_length + neurone_before_index;
+
+            int poids_index = current_neurone_index * layer_before_length + neurone_before_index;
             current_neurone_output += neurone_layer_before[neurone_before_index] * before_layer_weight[poids_index];
         }
-        current_layer_neurones[neurone_index] = current_neurone_output;
+        current_layer_neurones[current_neurone_index] = current_neurone_output;
         if (output_layer != NULL){
-            output_layer[neurone_index] = current_neurone_output;
+            output_layer[current_neurone_index] = current_neurone_output;
         }
     }
 }
 
 /* BACK-PROPAGATION PHASE */
+// Comment savoir si je dois augmenter ou diminuer un poids pour que mon réseau fasse moins d'erreurs ?
 
-// ETAPE 2 : calculer la dérivée partielle de la loss par rapport à un poids.
-// next_neurone = poids * neurone_before + biais
-// On veut calculer : dérivée de la loss / dérivée du poids. Pour cela, on utilise la règle de dérivation en chaîne :
-// dérivée de la loss par rapport au poids =  dérivée de la loss par rapport au résultat du neurone * dérivée du résultat du neurone par rapport au poids
-// Or, dans notre calcul : dérivée du résultat du neurone par rapport au poids = activation_precedente
-// On obtient donc : gradient = dérivée_loss_par_rapport_au_resultat_neurone * activation_precedente
-// ATTENTION : la première valeur passée à cette fonction doit déjà être la dérivée de la loss par rapport au résultat du neurone. Ce n'est pas nécessairement la loss elle-même.
-
-double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_L, double neurone_before)
+double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_loss, double neurone_before)
 {
-
     // calculer l'influence du poids sur le résultat du neurone.
     // ^y = next_neurone = poids * neurone_before + biais
     // ^y = w * x + b
@@ -142,7 +134,7 @@ double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_L, do
 
     // ETAPE 2B : calculer le gradient en appliquant la règle de dérivation en chaîne.
     // Le gradient indique comment la loss varie localement lorsque l'on modifie ce poids.
-    double gradient = derivee_L * derivee_y_;
+    double gradient = derivee_loss * derivee_y_;
     return gradient;
 }
 
