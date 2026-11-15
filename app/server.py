@@ -113,6 +113,10 @@ def charger_modele(nom):
     if resultat != 0:
         raise ValueError("Impossible de charger : " + chemin)
 
+    print("Fichier testé :", chemin)
+    print("Résultat du chargement C :", resultat)
+    print("K, dimensions, sigma :", k_charge.value, dimensions_charge.value, sigma_charge.value)
+
     # Retourner tous les paramètres du modèle.
     modele = {
         "centroids": centroids,
