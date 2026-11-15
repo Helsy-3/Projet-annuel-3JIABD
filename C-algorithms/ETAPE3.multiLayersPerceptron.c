@@ -149,8 +149,83 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     }
 }
 
-/* BACK-PROPAGATION PHASE */
 
+int pmc_predire(
+    double *entree,
+    int nb_couches,
+    int *dimensions,
+    double **weights,
+    double **biases,
+    double *sorties
+)
+{
+    if (entree == NULL || dimensions == NULL ||
+        weights == NULL || biases == NULL ||
+        sorties == NULL || nb_couches < 2)
+        return -1;
+
+    for (int i = 0; i < nb_couches; i++) {
+        if (dimensions[i] <= 0)
+            return -1;
+    }
+
+    for (int i = 0; i < nb_couches - 1; i++) {
+        if (weights[i] == NULL || biases[i] == NULL)
+            return -1;
+    }
+
+    double **neurones = calloc(nb_couches, sizeof(double *));
+
+    if (neurones == NULL)
+        return -1;
+
+    for (int i = 0; i < nb_couches; i++) {
+        neurones[i] = malloc(dimensions[i] * sizeof(double));
+
+        if (neurones[i] == NULL)
+            goto erreur;
+    }
+
+    // Copier les données d'entrée.
+    for (int i = 0; i < dimensions[0]; i++)
+        neurones[0][i] = entree[i];
+
+    // Propagation avant.
+    for (int couche = 1; couche < nb_couches; couche++) {
+        calculer_single_layer_output(
+            dimensions[couche - 1],
+            dimensions[couche],
+            neurones[couche],
+            neurones[couche - 1],
+            NULL,
+            weights[couche - 1],
+            biases[couche - 1]
+        );
+    }
+
+    // Récupérer les sorties.
+    int output_length = dimensions[nb_couches - 1];
+
+    for (int i = 0; i < output_length; i++)
+        sorties[i] = neurones[nb_couches - 1][i];
+
+    for (int i = 0; i < nb_couches; i++)
+        free(neurones[i]);
+
+    free(neurones);
+
+    return 0;
+
+erreur:
+    for (int i = 0; i < nb_couches; i++)
+        free(neurones[i]);
+
+    free(neurones);
+    return -1;
+}
+
+
+/* BACK-PROPAGATION PHASE */
 double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_loss_par_rapport_sortie_neurone, double neurone_before)
 {
     // y^ = w * x + b

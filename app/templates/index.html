@@ -61,7 +61,7 @@
 
     <br>
 
-    <button onclick="analyser()">Analyser mon déchet</button>
+    <button onclick="analyser_rbf()">Analyser mon déchet</button>
 
     <div id="resultat"></div>
 
@@ -80,7 +80,40 @@
         }
     });
 
-    async function analyser() {
+    async function analyser_pmc(){
+        const fichier = document.getElementById("image").files[0];
+
+        if(!fichier){
+            alert("Choisis une image!");
+            return;
+        }
+
+        const donnees = new FormData();
+        donnees.append("image", fichier);
+        document.getElementById("resultat").innerText = "Analyse en cours...";
+
+
+        try {
+            const reponse = await fetch("/predict-image-rbf", {
+                method: "POST",
+                body: donnees
+            });
+
+            const resultat = await reponse.json();
+
+            if (!reponse.ok) {
+                throw new Error(resultat.erreur || "Erreur de prédiction");
+            }
+
+            document.getElementById("resultat").innerText =
+                "Résultat : " + resultat.classe;
+
+        } catch (erreur) {
+            document.getElementById("resultat").innerText =
+                "Erreur : " + erreur.message;
+        }
+    }
+    async function analyser_rbf() {
 
         const fichier = document.getElementById("image").files[0];
 
@@ -95,7 +128,7 @@
         document.getElementById("resultat").innerText = "Analyse en cours...";
 
         try {
-            const reponse = await fetch("/predict-image", {
+            const reponse = await fetch("/predict-image-rbf", {
                 method: "POST",
                 body: donnees
             });
