@@ -1,7 +1,9 @@
 import ctypes
 import os
 import numpy as np
-from flask import Flask, jsonify, request
+from flask import Flask, render_template, jsonify, request
+import io
+from PIL import Image
 
 app = Flask(__name__)
 
@@ -268,6 +270,47 @@ def predict():
 # --------------------------------------------------
 # 8. DEMARRER LE SERVEUR
 # --------------------------------------------------
+
+# PAGE PRINCIPALE DU SITE
+@app.route("/")
+def accueil():
+    return render_template("index.html")
+
+
+# RECEVOIR UNE IMAGE ET EFFECTUER UNE PREDICTION
+@app.route("/predict-image", methods=["POST"])
+def predict_image():
+
+    if "image" not in request.files:
+        return jsonify({"erreur": "Aucune image reçue"}), 400
+
+    try:
+        fichier = request.files["image"]
+
+        # Transformer l'image en vecteur de 12 valeurs
+        image = Image.open(io.BytesIO(fichier.read())).convert("RGB")
+        image = image.resize((2, 2))
+
+        vecteur = (
+            np.asarray(image, dtype=np.float64) / 255.0
+        ).flatten()
+
+        # Calculer les scores des trois modèles
+        scores = {}
+
+        for nom, modele in MODELES.items():
+            scores[nom] = calculer_score(modele, vecteur)
+
+        # Choisir la classe ayant le meilleur score
+        classe = max(scores, key=scores.get)
+
+        return jsonify({
+            "classe": classe,
+            "scores": scores
+        })
+
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 400
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=False)

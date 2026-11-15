@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>EcoSort</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #f4f7f4;
+            padding: 60px 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            max-width: 400px;
+            margin: auto;
+        }
+
+        h1 {
+            color: #24834b;
+        }
+
+        button {
+            background: #24834b;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        img {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+
+        #resultat {
+            margin-top: 25px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>♻️ EcoSort</h1>
+    <p>Identifie ton déchet grâce à notre IA RBF.</p>
+
+    <input type="file" id="image" accept="image/*">
+
+    <br>
+
+    <img id="preview" style="display:none">
+
+    <br>
+
+    <button onclick="analyser()">Analyser mon déchet</button>
+
+    <div id="resultat"></div>
+
+</div>
+
+<script>
+
+    document.getElementById("image").addEventListener("change", function() {
+        const fichier = this.files[0];
+
+        if (fichier) {
+            const preview = document.getElementById("preview");
+            preview.src = URL.createObjectURL(fichier);
+            preview.style.display = "block";
+            document.getElementById("resultat").innerText = "";
+        }
+    });
+
+    async function analyser() {
+
+        const fichier = document.getElementById("image").files[0];
+
+        if (!fichier) {
+            alert("Choisis une image !");
+            return;
+        }
+
+        const donnees = new FormData();
+        donnees.append("image", fichier);
+
+        document.getElementById("resultat").innerText = "Analyse en cours...";
+
+        try {
+            const reponse = await fetch("/predict-image", {
+                method: "POST",
+                body: donnees
+            });
+
+            const resultat = await reponse.json();
+
+            if (!reponse.ok) {
+                throw new Error(resultat.erreur || "Erreur de prédiction");
+            }
+
+            document.getElementById("resultat").innerText =
+                "Résultat : " + resultat.classe;
+
+        } catch (erreur) {
+            document.getElementById("resultat").innerText =
+                "Erreur : " + erreur.message;
+        }
+    }
+
+</script>
+
+</body>
+</html>

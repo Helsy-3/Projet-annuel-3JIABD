@@ -1,14 +1,5 @@
 # Projet annuel 
 
-Contexte - Vocabulaire 
-
-* CLASSE = Quand nous parlons de classe, nous désignons une catégorie de déchet que le modèle doit reconnaître.
-
-Exemple: 
-- Classe 0 : plastique 
-- Classe 1 : verre 
-- Classe 2 : métal 
-
 
 # Etape 1 : Test sur des données linéairement séparables
 Le Perceptron simple qui est codé en C n'a aucune couche cachée et ne possède qu'un seul neurone. Le Perceptron classique (inventé par Frank Rosenblatt) est le modèle le plus basique possible : les entrées sont directement reliées à un unique neurone de sortie. Il ne peut séparer que des données parfaitement linéaires.
@@ -16,7 +7,6 @@ Le Perceptron simple qui est codé en C n'a aucune couche cachée et ne possède
 Comme le perceptron classique n'a besoin que d'un seul neurone, nous utilisons dans notre code en C un tableau de poids qui consiste en un vecteur à une seule dimension ([w1, w2]) - VERSUS 1 couche avec plusieurs neurones = Un tableau à 2 dimensions (une matrice de poids).
 
 Un algorithme beaucoup plus puissant est le Perceptron Multicouche (MLP) entraîné par rétropropagation du gradient.
-
 
 L'objectif est de tester le modèle sur plusieurs cas simples et connus, avant de les appliquer à la problématique réelle. 
 L'objectif est de commencer volontairement avec des problèmes très simples. Nous avons créé volontairement deux problèmes simples. 
@@ -313,3 +303,11 @@ Au lieu de créer un programme exécutable classique, cette option demande à gc
 
 -fPIC : générer du code indépendant de sa position
 PIC signifie Position-Independent Code. En gros, cela permet au code compilé de fonctionner même si le système charge la bibliothèque à une adresse mémoire différente selon le programme. C'est couramment utilisé pour créer des bibliothèques partagées.
+
+
+
+## Lancement 
+
+Lancer le front: python3 app/client.py dataset-img/test/plastic/05.jpeg 
+Lancer le serveur : python3 app/server.py
+Le site tourne sur http://127.0.0.1:5000
