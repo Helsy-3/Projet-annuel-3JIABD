@@ -47,7 +47,6 @@ double *init_poids_by_layer(int before_layer_neurones_number, int next_layer_neu
 }
 
 /* INIT PHASE */
-
 int init_couches_cachees_by_layer(int nb_couches, int nb_neurones_par_couches[], double **neurones_by_layer_array)
 {
     if (nb_couches <= 0 || nb_neurones_par_couches == NULL || neurones_by_layer_array == NULL)
@@ -82,7 +81,6 @@ erreur:
 }
 
 /* INIT PHASE */
-
 int init_weights_and_biases_by_hidden_layers(int nb_couches, int nb_neurones_par_couche[], double **weights, double **biases)
 {
     if (nb_couches < 2 || nb_neurones_par_couche == NULL || weights == NULL || biases == NULL)
@@ -151,7 +149,7 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
 
 
 int pmc_predire(
-    double *entree,
+    double *single_picture_in_X,
     int nb_couches,
     int *dimensions,
     double **weights,
@@ -159,7 +157,7 @@ int pmc_predire(
     double *sorties
 )
 {
-    if (entree == NULL || dimensions == NULL ||
+    if (single_picture_in_X == NULL || dimensions == NULL ||
         weights == NULL || biases == NULL ||
         sorties == NULL || nb_couches < 2)
         return -1;
@@ -186,9 +184,9 @@ int pmc_predire(
             goto erreur;
     }
 
-    // Copier les données d'entrée.
+    // Copier les données d'entrée dans le premier neurone.
     for (int i = 0; i < dimensions[0]; i++)
-        neurones[0][i] = entree[i];
+        neurones[0][i] = single_picture_in_X[i];
 
     // Propagation avant.
     for (int couche = 1; couche < nb_couches; couche++) {
@@ -394,7 +392,7 @@ erreur:
 }
 
 /* TRAINING PHASE */
-int exec_PMC(double *dataset, int dataset_length,
+int train_PMC(double *dataset, int dataset_length,
              int *predictions_by_categories,
              int nb_couches,
              int nb_neurones_par_couches[],
@@ -455,7 +453,6 @@ int exec_PMC(double *dataset, int dataset_length,
     int input_length = nb_neurones_par_couches[0];
 
     // Étape 2 : entraînement.
-
     for (int epoch = 0; epoch < epochs; epoch++)
     {
         for (int picture = 0; picture < dataset_length; picture++)
@@ -737,7 +734,7 @@ int main(void)
 
     /* Entraînement du perceptron multicouche. */
 
-    int predictions = exec_PMC(
+    int predictions = train_PMC(
         (double *)X,
         dataset_length,
         dataset_classes,
