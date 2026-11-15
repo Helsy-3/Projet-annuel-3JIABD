@@ -42,7 +42,7 @@ lib.rbf_charger.argtypes = [
 lib.rbf_charger.restype = ctypes.c_int
 
 # Décrire les arguments de la fonction qui calcule les activations RBF.
-lib.calculer_dot_rbf_closeness_to_centroids.argtypes = [
+lib.compute_dot_proximity_to_centroids.argtypes = [
     ctypes.c_int,
     P_DOUBLE,
     ctypes.c_int,
@@ -50,7 +50,8 @@ lib.calculer_dot_rbf_closeness_to_centroids.argtypes = [
     ctypes.c_double,
     P_DOUBLE
 ]
-lib.calculer_dot_rbf_closeness_to_centroids.restype = None
+
+lib.compute_dot_proximity_to_centroids.restype = None
 
 # Décrire les arguments de la fonction qui calcule le score final.
 # Le nom doit correspondre à celui défini dans ton fichier C.
@@ -59,8 +60,8 @@ lib.calculer_dot_output.argtypes = [
     P_DOUBLE,
     P_DOUBLE
 ]
-lib.calculer_dot_output.restype = ctypes.c_double
 
+lib.calculer_dot_output.restype = ctypes.c_double
 
 # --------------------------------------------------
 # 3. CHARGER UN MODELE ENREGISTRE
@@ -148,12 +149,12 @@ def calculer_score(modele, vecteur):
 
     k = modele["k"]
     dimensions = modele["dimensions"]
-
+    
     # Tableau qui contiendra la proximité avec chaque centroïde.
     proximites = np.zeros(k, dtype=np.float64)
 
     # Calculer les activations RBF grâce à la fonction C.
-    lib.calculer_dot_rbf_closeness_to_centroids(
+    lib.compute_dot_proximity_to_centroids(
         dimensions,
         vecteur.ctypes.data_as(P_DOUBLE),
         k,
