@@ -125,24 +125,24 @@ void compute_dot_proximity_to_centroids(int dataset_columns, double dot[dataset_
 }
 
 // ETAPE 6 : Entrainer les poids rétro-activement
-void recursive_train_weights(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs)
+void recursive_train_weights(int K, int dataset_length, int dataset_columns, double dataset_array[dataset_length][dataset_columns], double target_predictions[dataset_length], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs)
 {
     double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++)
     {
         double total_error = 0.0;
-        for (int i = 0; i < dataset_rows; i++)
+        for (int i = 0; i < dataset_length; i++)
         { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
             compute_dot_proximity_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
-            double error = output - targets[i];
+            double error = output - target_predictions[i];
             total_error += error * error;
             for (int centroid = 0; centroid < K; centroid++)
             {
                 weights[centroid] -= learning_rate * 2.0 * error * dot_proximity_to_centroids[centroid];
             }
         }
-        double mse = total_error / dataset_rows; // Erreur moyenne
+        double mse = total_error / dataset_length; // Erreur moyenne
         printf("Epoch %d - MSE = %f\n", epoch, mse);
     }
 }
