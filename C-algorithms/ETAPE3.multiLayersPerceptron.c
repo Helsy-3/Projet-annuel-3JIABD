@@ -265,7 +265,7 @@ void update_before_layer_bias(int before_layer_index, double **all_biases,
     }
 }
 
-int run_pmc_dataset(
+int train_pmc_dataset(
     double *dataset,
     int *classes,
     int dataset_length,
