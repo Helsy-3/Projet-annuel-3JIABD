@@ -149,7 +149,6 @@ void recursive_train_weights(int K, int dataset_length, int dataset_columns, dou
 
 void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], int cluster_size)
 {
-
     // step 0: init phase
     size_t dataset_size = dataset_rows;
     int K = dataset_size / cluster_size; // K = nombre de clusters.
@@ -163,8 +162,7 @@ void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_row
     // step 1: find centroids and assign clusters
     find_centroids(K, dataset_rows, dataset_columns, dataset_array, centroids_array);
     int max_iterations = 100;
-    for (int iteration = 0; iteration < max_iterations; iteration++)
-    {
+    for (int iteration = 0; iteration < max_iterations; iteration++){
         assign_clusters(K, dataset_rows, dataset_columns, dataset_array, centroids_array, clusters_array, cluster_sizes);
         update_centroids(K, dataset_rows, dataset_columns, dataset_array, clusters_array, cluster_sizes, centroids_array);
     }
