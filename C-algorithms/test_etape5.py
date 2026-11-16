@@ -50,9 +50,9 @@ lib.calculer_sigma.argtypes = [ctypes.c_int, ctypes.c_int, P_DOUBLE]
 lib.calculer_sigma.restype = ctypes.c_double
 
 # ETAPE 4 : pour un point donne, sa "proximite" (activation RBF) a chaque centroide
-lib.calculer_dot_rbf_closeness_to_centroids.argtypes = [ctypes.c_int, P_DOUBLE, ctypes.c_int, P_DOUBLE,
+lib.compute_dot_proximity_to_centroids.argtypes = [ctypes.c_int, P_DOUBLE, ctypes.c_int, P_DOUBLE,
                                                          ctypes.c_double, P_DOUBLE]
-lib.calculer_dot_rbf_closeness_to_centroids.restype = None
+lib.compute_dot_proximity_to_centroids.restype = None
 
 # ETAPE 5 : apprend les poids (un par centroide) par descente de gradient
 lib.recursive_train_weights.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, P_DOUBLE, P_DOUBLE, P_DOUBLE,
@@ -137,7 +137,7 @@ class RBF:
         proximite = np.zeros(self.k)
         sorties = np.zeros(len(points))
         for i, point in enumerate(points):
-            lib.calculer_dot_rbf_closeness_to_centroids(d, point.ctypes.data_as(P_DOUBLE), self.k,
+            lib.compute_dot_proximity_to_centroids(d, point.ctypes.data_as(P_DOUBLE), self.k,
                                                      self.centroids.ctypes.data_as(P_DOUBLE), self.sigma,
                                                      proximite.ctypes.data_as(P_DOUBLE))
             sorties[i] = lib.calculer_dot_output(self.k, proximite.ctypes.data_as(P_DOUBLE),

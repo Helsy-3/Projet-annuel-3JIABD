@@ -21,7 +21,6 @@ from test_etape5 import RBF, image_vers_vecteur, lister_images  # reutilise la c
 
 NOMS_CLASSES = {0: "plastique", 1: "verre", 2: "metal"}
 
-
 def main():
     # On entraine seulement sur dataset-img/train/ (pas test/), comme partout ailleurs
     # dans le projet - voir dataset-img/separer_dataset.py.
