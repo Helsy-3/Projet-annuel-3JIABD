@@ -24,8 +24,8 @@ double *init_biais_by_layer(int nb_neurones_current_layer)
     return bias_array;
 }
 
-/* INIT PHASE */
 
+/* INIT PHASE */
 double *init_poids_by_layer(int before_layer_neurones_number, int next_layer_neurones_number)
 {
     if (before_layer_neurones_number <= 0 || next_layer_neurones_number <= 0)
@@ -190,8 +190,8 @@ int pmc_predire(
         calculer_single_layer_output(
             dimensions[couche - 1],
             dimensions[couche],
-            neurones[couche],
             neurones[couche - 1],
+            neurones[couche],
             NULL,
             weights[couche - 1],
             biases[couche - 1]
@@ -265,30 +265,6 @@ void update_before_layer_bias(int before_layer_index, double **all_biases,
     }
 }
 
-int train_pmc_dataset(
-    double *dataset,
-    int *classes,
-    int dataset_length,
-    int nb_couches,
-    int *dimensions,
-    double **weights,
-    double **biases,
-    int epochs,
-    double learning_rate
-)
-{
-    return train_PMC(
-        dataset,
-        dataset_length,
-        classes,
-        nb_couches,
-        dimensions,
-        weights,
-        biases,
-        epochs,
-        learning_rate
-    );
-}
 
 int backpropagation_to_every_layer(double **neurones_by_layer_array,
                                    int nb_couches,
@@ -406,6 +382,7 @@ erreur:
 
     return -1;
 }
+
 
 /* TRAINING PHASE */
 int train_PMC(double *dataset, int dataset_length,
@@ -549,6 +526,31 @@ int train_PMC(double *dataset, int dataset_length,
     free(neurones_by_layer_array);
 
     return bonnes_predictions;
+}
+
+int train_pmc_dataset(
+    double *dataset,
+    int *classes,
+    int dataset_length,
+    int nb_couches,
+    int *dimensions,
+    double **weights,
+    double **biases,
+    int epochs,
+    double learning_rate
+)
+{
+    return train_PMC(
+        dataset,
+        dataset_length,
+        classes,
+        nb_couches,
+        dimensions,
+        weights,
+        biases,
+        epochs,
+        learning_rate
+    );
 }
 
 /* SAVE PHASE */
