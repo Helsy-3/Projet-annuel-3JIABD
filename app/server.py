@@ -294,30 +294,23 @@ def calculer_score(modele, vecteur):
 # --------------------------------------------------
 # 6. VERIFIER QUE LE SERVEUR FONCTIONNE
 # --------------------------------------------------
-
 @app.route("/ping", methods=["GET"])
 def ping():
-
     return jsonify({
         "message": "Le serveur RBF fonctionne",
         "modeles_charges": list(MODELES.keys())
     })
 
-
 # --------------------------------------------------
 # 7. PREDIRE LA CLASSE D'UN VECTEUR
 # --------------------------------------------------
-
 @app.route("/predict", methods=["POST"])
 def predict():
-
-    # Vérifier que des modèles ont été chargés.
     if len(MODELES) == 0:
         return jsonify({
             "erreur": "Aucun modèle chargé. Entraîne les modèles avant."
         }), 503
 
-    # Récupérer les données envoyées par le client.
     donnees = request.get_json(silent=True)
 
     if not isinstance(donnees, dict):
@@ -330,7 +323,6 @@ def predict():
             "erreur": "Le champ vecteur est obligatoire."
         }), 400
 
-    # Transformer les données reçues en nombres.
     try:
         vecteur = np.asarray(
             donnees["vecteur"], dtype=np.float64
@@ -389,9 +381,7 @@ def accueil():
     return render_template("index.html")
 
 
-# --------------------------------------------------
-# PREDICTION PMC A PARTIR D'UN VECTEUR
-# --------------------------------------------------
+# Prédiction PMC avec vecteur
 @app.route("/predict-pmc-vecteur", methods=["POST"])
 def predict_pmc():
 
@@ -419,9 +409,7 @@ def predict_pmc():
         return jsonify({"erreur": str(e)}), 400
 
 
-# --------------------------------------------------
-# PREDICTION PMC A PARTIR D'UNE IMAGE
-# --------------------------------------------------
+# Prédiction PMC avec image
 @app.route("/predict-image-pmc", methods=["POST"])
 def predict_image_pmc():
 
@@ -457,16 +445,11 @@ def predict_image_pmc():
         return jsonify({"erreur": str(e)}), 400
 
     
-
-# --------------------------------------------------
-# PREDICTION RBF A PARTIR D'UNE IMAGE
-# --------------------------------------------------
+# Prédiction PMC avec image 
 @app.route("/predict-image-rbf", methods=["POST"])
 def predict_image():
-
     if "image" not in request.files:
         return jsonify({"erreur": "Aucune image reçue"}), 400
-
     try:
         fichier = request.files["image"]
 
