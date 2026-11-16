@@ -49,6 +49,8 @@ def main():
 
         etat = reponse.json()
 
+        print("Connexion au serveur :", URL)
+        print("Endpoint de vérification :", f"{URL}/ping")
         print("État du serveur :", etat)
 
         if not etat.get("modeles_charges"):
@@ -76,6 +78,11 @@ def main():
 
         print("Image analysée :", chemin_photo)
         print("Nombre de caractéristiques :", len(vecteur))
+        reponse = session.post(
+        f"{URL}/predict",
+        json={"vecteur": vecteur},
+        timeout=10
+        )
 
         # Envoyer le vecteur au serveur Flask
         reponse = session.post(
