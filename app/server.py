@@ -10,7 +10,6 @@ app = Flask(__name__)
 # --------------------------------------------------
 # 1. TROUVER LES FICHIERS DU PROJET
 # --------------------------------------------------
-
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(DOSSIER)
 
@@ -32,10 +31,9 @@ P_DOUBLE = ctypes.POINTER(ctypes.c_double)
 # --------------------------------------------------
 # CHARGER RBF LIBRARY
 # --------------------------------------------------
-
 lib_rbf = ctypes.CDLL(CHEMIN_LIB_RBF)
 
-# Décrire les arguments de la fonction C rbf_charger.
+# Décrire les arguments de la fonction rbf_charger.
 lib_rbf.rbf_charger.argtypes = [
     ctypes.c_char_p,
     P_DOUBLE,
@@ -59,7 +57,6 @@ lib_rbf.compute_dot_proximity_to_centroids.argtypes = [
 lib_rbf.compute_dot_proximity_to_centroids.restype = None
 
 # Décrire les arguments de la fonction qui calcule le score final.
-# Le nom doit correspondre à celui défini dans ton fichier C.
 lib_rbf.calculer_dot_output.argtypes = [
     ctypes.c_int,
     P_DOUBLE,
@@ -68,11 +65,9 @@ lib_rbf.calculer_dot_output.argtypes = [
 
 lib_rbf.calculer_dot_output.restype = ctypes.c_double
 
-
 # --------------------------------------------------
 # CHARGER PMC LIBRARY
 # --------------------------------------------------
-
 lib_pmc = ctypes.CDLL(CHEMIN_LIB_PMC)
 
 lib_pmc.pmc_charger.argtypes = [
@@ -82,7 +77,6 @@ lib_pmc.pmc_charger.argtypes = [
     ctypes.POINTER(P_DOUBLE),
     ctypes.POINTER(P_DOUBLE)
 ]
-
 lib_pmc.pmc_charger.restype = ctypes.c_int
 
 lib_pmc.pmc_predire.argtypes = [
@@ -96,11 +90,9 @@ lib_pmc.pmc_predire.argtypes = [
 
 lib_pmc.pmc_predire.restype = ctypes.c_int
 
-
 # --------------------------------------------------
 # CHARGER LE MODELE PMC
 # --------------------------------------------------
-
 def charger_modele_pmc():
     chemin = os.path.join(DOSSIER_MODELES, "pmc_weights.txt")
     if not os.path.isfile(chemin):
@@ -122,12 +114,8 @@ def charger_modele_pmc():
     biases = []
 
     for i in range(nb_couches - 1):
-        weights.append(
-            np.zeros(dimensions[i] * dimensions[i + 1], dtype=np.float64)
-        )
-        biases.append(
-            np.zeros(dimensions[i + 1], dtype=np.float64)
-        )
+        weights.append(np.zeros(dimensions[i] * dimensions[i + 1], dtype=np.float64))
+        biases.append(np.zeros(dimensions[i + 1], dtype=np.float64))
 
     weights_ptrs = (P_DOUBLE * (nb_couches - 1))()
     biases_ptrs = (P_DOUBLE * (nb_couches - 1))()
@@ -167,12 +155,9 @@ MODELE_PMC = charger_modele_pmc()
 # --------------------------------------------------
 # CALCULER LES SCORES DU PMC
 # --------------------------------------------------
-
 def calculer_scores_pmc(vecteur):
-
     if MODELE_PMC is None:
         raise ValueError("Le modèle PMC n'est pas chargé.")
-
     vecteur = np.ascontiguousarray(vecteur, dtype=np.float64)
 
     dimensions = MODELE_PMC["dimensions"]
@@ -206,10 +191,7 @@ def calculer_scores_pmc(vecteur):
 # --------------------------------------------------
 # 3. CHARGER UN MODELE RBF
 # --------------------------------------------------
-
 def charger_modele_rbf(nom):
-
-    # Exemple : app/modeles/rbf_plastique.txt
     chemin = os.path.join(
         DOSSIER_MODELES, "rbf_" + nom + ".txt"
     )
@@ -272,12 +254,10 @@ def charger_modele_rbf(nom):
 # --------------------------------------------------
 # 4. CHARGER LES TROIS MODELES AU DEMARRAGE
 # --------------------------------------------------
-
 MODELES = {}
 
 for nom in NOMS_CLASSES:
     modele = charger_modele_rbf(nom)
-
     if modele is not None:
         MODELES[nom] = modele
 
@@ -285,17 +265,13 @@ for nom in NOMS_CLASSES:
 # --------------------------------------------------
 # 5. CALCULER LE SCORE D'UN MODELE
 # --------------------------------------------------
-
 def calculer_score(modele, vecteur):
-
-    # Convertir le vecteur en tableau de nombres compatible avec C.
     vecteur = np.ascontiguousarray(vecteur, dtype=np.float64)
-
     k = modele["k"]
     dimensions = modele["dimensions"]
     
     # Tableau qui contiendra la proximité avec chaque centroïde.
-    proximites = np.zeros(k, dtype=np.float64)
+    dot_proximity_to_centroids = np.zeros(k, dtype=np.float64)
 
     # Calculer les activations RBF grâce à la fonction C.
     lib_rbf.compute_dot_proximity_to_centroids(
@@ -304,16 +280,14 @@ def calculer_score(modele, vecteur):
         k,
         modele["centroids"].ctypes.data_as(P_DOUBLE),
         modele["sigma"],
-        proximites.ctypes.data_as(P_DOUBLE)
+        dot_proximity_to_centroids.ctypes.data_as(P_DOUBLE)
     )
 
-    # Combiner les activations avec les poids appris.
     score = lib_rbf.calculer_dot_output(
         k,
-        proximites.ctypes.data_as(P_DOUBLE),
+        dot_proximity_to_centroids.ctypes.data_as(P_DOUBLE),
         modele["poids"].ctypes.data_as(P_DOUBLE)
     )
-
     return float(score)
 
 
