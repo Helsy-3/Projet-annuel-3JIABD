@@ -124,8 +124,8 @@ erreur:
 
 /* PROPAGATION PHASE */
 void calculer_single_layer_output(int layer_before_length, int current_layer_length,
-                                  double *current_layer_neurones,
                                   double *neurone_layer_before,
+                                  double *current_layer_neurones,
                                   double *output_layer,
                                   double *before_layer_weight,
                                   double *before_layer_bias)
@@ -137,11 +137,8 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
             int poids_index = current_neurone_index * layer_before_length + neurone_before_index;
             current_neurone_output += neurone_layer_before[neurone_before_index] * before_layer_weight[poids_index];
         }
-
         current_layer_neurones[current_neurone_index] = current_neurone_output;
-
-        if (output_layer != NULL)
-        {
+        if (output_layer != NULL){
             output_layer[current_neurone_index] = current_neurone_output;
         }
     }
@@ -469,17 +466,17 @@ int train_PMC(double *dataset, int dataset_length,
         return -1;
     }
 
-    int input_length = nb_neurones_par_couches[0];
+    int nombre_neurones_par_couche = nb_neurones_par_couches[0];
 
     // Étape 2 : entraînement.
     for (int epoch = 0; epoch < epochs; epoch++)
     {
         for (int picture = 0; picture < dataset_length; picture++)
         {
-            for (int neurone = 0; neurone < input_length; neurone++)
+            for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
             {
                 neurones_by_layer_array[0][neurone] =
-                    dataset[picture * input_length + neurone];
+                    dataset[picture * nombre_neurones_par_couche + neurone];
             }
 
             for (int couche_index = 1; couche_index < nb_couches; couche_index++)
@@ -518,10 +515,10 @@ int train_PMC(double *dataset, int dataset_length,
     int bonnes_predictions = 0;
     for (int picture = 0; picture < dataset_length; picture++)
     {
-        for (int neurone = 0; neurone < input_length; neurone++)
+        for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
         {
             neurones_by_layer_array[0][neurone] =
-                dataset[picture * input_length + neurone];
+                dataset[picture * nombre_neurones_par_couche + neurone];
         }
 
         for (int couche_index = 1; couche_index < nb_couches; couche_index++)
@@ -529,8 +526,8 @@ int train_PMC(double *dataset, int dataset_length,
             calculer_single_layer_output(
                 nb_neurones_par_couches[couche_index - 1],
                 nb_neurones_par_couches[couche_index],
-                neurones_by_layer_array[couche_index],
                 neurones_by_layer_array[couche_index - 1],
+                neurones_by_layer_array[couche_index],
                 NULL,
                 weights[couche_index - 1],
                 biases[couche_index - 1]);
