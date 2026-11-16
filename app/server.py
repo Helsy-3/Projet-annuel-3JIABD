@@ -18,7 +18,7 @@ CHEMIN_LIB_RBF = os.path.join(
     RACINE, "C-algorithms", "ETAPE5.RBF.so"
 )
 CHEMIN_LIB_PMC = os.path.join(
-    RACINE, "C-algorithms", "ETAPE3.PMC.so"
+    RACINE, "C-algorithms", "ETAPE3.multiLayersPerceptron.so"
 )
 
 DOSSIER_MODELES = os.path.join(DOSSIER, "modeles")
