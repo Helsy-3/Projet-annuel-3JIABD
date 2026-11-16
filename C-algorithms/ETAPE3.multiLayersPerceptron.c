@@ -476,8 +476,8 @@ int train_PMC(double *dataset, int dataset_length,
                 calculer_single_layer_output(
                     nb_neurones_par_couches[couche_index - 1],
                     nb_neurones_par_couches[couche_index],
-                    neurones_by_layer_array[couche_index],
                     neurones_by_layer_array[couche_index - 1],
+                    neurones_by_layer_array[couche_index],
                     NULL,
                     weights[couche_index - 1],
                     biases[couche_index - 1]);
