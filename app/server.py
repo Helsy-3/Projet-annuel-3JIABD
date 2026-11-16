@@ -7,9 +7,6 @@ from PIL import Image
 
 app = Flask(__name__)
 
-# --------------------------------------------------
-# 1. TROUVER LES FICHIERS DU PROJET
-# --------------------------------------------------
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(DOSSIER)
 
@@ -19,14 +16,10 @@ CHEMIN_LIB_RBF = os.path.join(
 CHEMIN_LIB_PMC = os.path.join(
     RACINE, "C-algorithms", "ETAPE3.multiLayersPerceptron.so"
 )
-
 DOSSIER_MODELES = os.path.join(DOSSIER, "modeles")
-
 NOMS_CLASSES = ["plastique", "verre", "metal"]
 
-# Type utilisé pour envoyer des tableaux de nombres à la bibliothèque C.
 P_DOUBLE = ctypes.POINTER(ctypes.c_double)
-
 
 # --------------------------------------------------
 # CHARGER RBF LIBRARY
@@ -164,7 +157,7 @@ def calculer_scores_pmc(vecteur):
     nb_couches = MODELE_PMC["nb_couches"]
 
     if vecteur.ndim != 1 or len(vecteur) != dimensions[0]:
-        raise ValueError("Le PMC attend 12 valeurs en entrée.")
+        raise ValueError("Le PMC attend {dimensions[0]} valeurs en entrée.")
 
     if not np.isfinite(vecteur).all():
         raise ValueError("Le vecteur contient des valeurs invalides.")
@@ -195,8 +188,6 @@ def charger_modele_rbf(nom):
     chemin = os.path.join(
         DOSSIER_MODELES, "rbf_" + nom + ".txt"
     )
-
-    # Vérifier que le fichier existe.
     if not os.path.isfile(chemin):
         return None
 
@@ -353,7 +344,6 @@ def predict():
                       + str(dimensions) + " valeurs."
         }), 400
 
-    # Calculer le score de chaque classe.
     scores = {}
 
     for nom in MODELES:
@@ -361,10 +351,8 @@ def predict():
         score = calculer_score(modele, vecteur)
         scores[nom] = score
 
-    # Choisir la classe qui possède le score le plus élevé.
     classe = max(scores, key=scores.get)
 
-    # Envoyer la prédiction au client.
     return jsonify({
         "classe": classe,
         "scores": scores
