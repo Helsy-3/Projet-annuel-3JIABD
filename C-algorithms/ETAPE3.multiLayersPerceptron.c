@@ -224,25 +224,19 @@ erreur:
 
 
 /* BACK-PROPAGATION PHASE */
-double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_loss_par_rapport_sortie_neurone, double neurone_before)
-{
+double calculer_derivee_partielle_loss_par_rapport_au_poids(double derivee_loss_par_rapport_sortie_neurone, double neurone_before){
     // y^ = w * x + b
     // dy/dw = x
-
     double derivee_neurone_par_rapport_au_poids = neurone_before;
-
     // dL/dw = dL/dy * dy/dw
-
-    double derivee_LOSS_par_rapport_au_poids =
-        derivee_loss_par_rapport_sortie_neurone * derivee_neurone_par_rapport_au_poids;
-
+    double derivee_LOSS_par_rapport_au_poids = derivee_loss_par_rapport_sortie_neurone * derivee_neurone_par_rapport_au_poids;
     return derivee_LOSS_par_rapport_au_poids;
 }
 
 void update_before_layer_weights(int before_layer_index, double **weights_matrice,
                                  int nb_poids, double learning_rate,
                                  double *derivees_loss_sortie_neurones,
-                                 double *neurones_layer_before,
+                                  double *neurones_layer_before,
                                  int layer_before_length)
 {
     if (layer_before_length <= 0 || weights_matrice == NULL ||
@@ -272,6 +266,31 @@ void update_before_layer_bias(int before_layer_index, double **all_biases,
     {
         all_biases[before_layer_index][i] -= learning_rate * erreurs_by_layer[i];
     }
+}
+
+int run_pmc_dataset(
+    double *dataset,
+    int *classes,
+    int dataset_length,
+    int nb_couches,
+    int *dimensions,
+    double **weights,
+    double **biases,
+    int epochs,
+    double learning_rate
+)
+{
+    return train_PMC(
+        dataset,
+        dataset_length,
+        classes,
+        nb_couches,
+        dimensions,
+        weights,
+        biases,
+        epochs,
+        learning_rate
+    );
 }
 
 int backpropagation_to_every_layer(double **neurones_by_layer_array,
@@ -496,9 +515,7 @@ int train_PMC(double *dataset, int dataset_length,
     }
 
     // Étape 3 : compter les bonnes prédictions après l'entraînement.
-
     int bonnes_predictions = 0;
-
     for (int picture = 0; picture < dataset_length; picture++)
     {
         for (int neurone = 0; neurone < input_length; neurone++)
@@ -538,7 +555,6 @@ int train_PMC(double *dataset, int dataset_length,
 }
 
 /* SAVE PHASE */
-
 int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couches[], double **weights, double **biases)
 {
     if (chemin == NULL ||
@@ -574,7 +590,6 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
     /* Sauvegarder les poids et les biais de chaque couche. */
     for (int couche = 0; couche < nb_couches - 1; couche++)
     {
-
         int nb_neurones_before = nb_neurones_par_couches[couche];
         int nb_neurones_current = nb_neurones_par_couches[couche + 1];
 
@@ -583,7 +598,6 @@ int pmc_sauvegarder(const char *chemin, int nb_couches, int nb_neurones_par_couc
             fclose(f);
             return -1;
         }
-
         int nb_poids = nb_neurones_before * nb_neurones_current;
 
         for (int i = 0; i < nb_poids; i++)
@@ -733,7 +747,6 @@ int main(void)
     }
 
     /* Entraînement du perceptron multicouche. */
-
     int predictions = train_PMC(
         (double *)X,
         dataset_length,
@@ -751,7 +764,6 @@ int main(void)
            dataset_length);
 
     /* Sauvegarde du réseau entraîné. */
-
     if (predictions >= 0)
     {
         if (pmc_sauvegarder(
@@ -770,7 +782,6 @@ int main(void)
     }
 
     /* Libération de la mémoire. */
-
     for (int i = 0; i < nb_couches - 1; i++)
     {
         free(weights[i]);

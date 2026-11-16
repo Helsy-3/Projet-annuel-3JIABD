@@ -62,7 +62,7 @@
     <br>
 
     <button onclick="analyser_rbf()">Analyser mon déchet</button>
-
+    <button onclick="analyser_pmc()"> Analyser avec le PMC </button>
     <div id="resultat"></div>
 
 </div>
@@ -94,7 +94,7 @@
 
 
         try {
-            const reponse = await fetch("/predict-image-rbf", {
+            const reponse = await fetch("/predict-image-pmc", {
                 method: "POST",
                 body: donnees
             });
@@ -113,6 +113,7 @@
                 "Erreur : " + erreur.message;
         }
     }
+
     async function analyser_rbf() {
 
         const fichier = document.getElementById("image").files[0];
