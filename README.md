@@ -312,4 +312,5 @@ Lancer le front: python3 app/client.py dataset-img/test/plastic/05.jpeg
 Lancer le serveur : python3 app/server.py
 Le site tourne sur http://127.0.0.1:5000
 Compiler: 
-gcc -Wall -Wextra -O2 -fPIC -shared \ ETAPE3.multiLayersPerceptron.c utils.c \ -o ETAPE3.PMC.so -lm
+
+gcc -shared ETAPE1.basicPerceptron.c utils.c -o ETAPE1.basicPerceptron.so
