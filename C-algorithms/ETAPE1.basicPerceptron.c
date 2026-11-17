@@ -1,85 +1,34 @@
 #include <stdio.h>
 #include <string.h>
 
-// EXEMPLE
-//int X_data[3][2] = {{1, 1}, {2, 3}, {3, 3}};
-//int Y_pred[3] = {1, -1, -1};
-
-int entrainer_perceptron(double learning_rate, double *bias, int epochs, int X_data_lignes, int X_data_colonnes, double X_data[X_data_lignes][X_data_colonnes], double Y_pred[])
-{
-    size_t dataset_size = X_data_lignes; // taille du dataset
-    size_t poids_nb = X_data_colonnes;
-
-    // Dans le data set, chaque donnée est un vecteur avec des caractéristiques [1, 2, 3, 4]
-    // A chaque vecteur correspond un poids. Il y a autant de poids qu'il y a de caractéristiques par donnée du dataset.
-
-    // Il faut qu'il y ait autant de poids qu'il y a de caractéristiques pour une donnée.
-    // Exemple 1: une maison avec deux caractéristiques: la superficie et le nombre d'étages : 2 caractéristiques => donc il faut 2 poids.
-    // Exemple 2: une photo de bouteille avec 32 pixels : 32 caractéristiques => donc il faut 32 poids.
-
-    double poids[poids_nb];
-    memset(poids, 0, sizeof(poids)); // on initialise le tableau de poids à 0.
-    int total_errors = 0;
-
-    for (int i = 0; i < epochs; i++) // on entraine le modèle autant de fois qu'il y a de répétitions
-    {
-        int total_errors = 0; // on ca comptabiliser le nombre d'erreurs à chaque fois en comparant Y_pred (le résultat attendu)
-                              // avec le résultat obtenu avec les poids initialisés à 0.
-
-        for (int i = 0; i < dataset_size; i++) // on veut itérer sur toutes les données du data_set
-        {
-            double linear_output = 0; // un seul neurone
-
-            for (int y = 0; y < poids_nb; y++)
-            {
-                linear_output += X_data[i][y] * poids[y]; // un seul neurone donc on aditionne chaque membre du vecteur et ça donne la sortie de l'unique neurone
-            }
-
-            linear_output = linear_output + *bias; // sortie de l'unique neurone
-
-            int pred = (linear_output >= 0) ? 1 : -1; // prediction du modèle
-            if (pred != Y_pred[i])
-                { // si la prédiction obtenue est différente de la prédiction attendue
-                    for(int y = 0; y < poids_nb ; y++){
-                    poids[y] += learning_rate * Y_pred[i] * X_data[i][y];
-                    }
-                    *bias += learning_rate * Y_pred[i];
-                    total_errors++;
-                }
-
-        }
-    }
-    return total_errors;
-}
-
-// Entraine un perceptron sur des donnees envoyees depuis Python (vraies photos du dataset)
-// vecteurs : n_exemples * 12 valeurs a la suite (chaque exemple = 12 valeurs, une photo reduite en 2x2 pixels)
-// labels   : n_exemples valeurs, -1 ou 1
-int run_perceptron_dataset(
-    double *vecteurs,
-    int *labels,
-    int n_exemples,
-    int n_features,
+int train_basic_perceptron(
+    double *dataset_one_long_vector,
+    int *expected_targets,
+    int dataset_length,
+    int vector_length,
     double learning_rate,
-    int max_iter,
+    int epochs,
     double *weights,
     double *bias)
 {
-    for (int rep = 0; rep < max_iter; rep++)
+    for (int epoch = 0; epoch < epochs; epoch++)
     {
         int total_errors = 0;
-        for (int i = 0; i < n_exemples; i++)
-        {
+        for (int i = 0; i < dataset_length; i++){
             double linear_output = *bias;
-            for (int j = 0; j < n_features; j++)
-                linear_output += vecteurs[i * n_features + j] * weights[j];
-            int pred = (linear_output >= 0) ? 1 : -1;
+            for (int j = 0; j < vector_length; j++)
+                linear_output += dataset_one_long_vector[i * vector_length + j] * weights[j];
+                int prediction = 0;
+                if(linear_output >= 0){
+                    prediction = 1;
+                } else {
+                    prediction = -1;
+                }
 
-            if (pred != labels[i])
-            {
-                for (int j = 0; j < n_features; j++)
-                    weights[j] += learning_rate * labels[i] * vecteurs[i * n_features + j];
-                *bias += learning_rate * labels[i];
+            if (prediction != expected_targets[i]){
+                for (int j = 0; j < vector_length; j++)
+                    weights[j] += learning_rate * expected_targets[i] * dataset_one_long_vector[i * vector_length + j];
+                *bias += learning_rate * expected_targets[i];
                 total_errors++;
             }
         }
@@ -87,17 +36,22 @@ int run_perceptron_dataset(
             break;
     }
 
-    int erreurs_finales = 0;
-    for (int i = 0; i < n_exemples; i++)
-    {
+    // après l'entrainement, on veut savoir si le modèle est devenu performant
+    int post_training_errors = 0;
+    for (int i = 0; i < dataset_length; i++){
         double sortie = *bias;
-        for (int j = 0; j < n_features; j++)
-            sortie += vecteurs[i * n_features + j] * weights[j];
-        int test_pred = (sortie >= 0) ? 1 : -1;
-        if (test_pred != labels[i])
-            erreurs_finales++;
+        for (int j = 0; j < vector_length; j++)
+            sortie += dataset_one_long_vector[i * dataset_length + j] * weights[j];
+            int prediction = 0;
+            if(sortie >= 0){
+                prediction = 1;
+            } else {
+                prediction = -1;
+            }
+        if (prediction != expected_targets[i])
+            post_training_errors++;
     }
-    return erreurs_finales;
+    return post_training_errors;
 }
 
 // Sauvegarde les poids et le biais appris dans un fichier texte, pour les reutiliser plus tard

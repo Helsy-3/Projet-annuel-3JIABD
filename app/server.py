@@ -7,10 +7,6 @@ from PIL import Image
 
 app = Flask(__name__)
 
-# --------------------------------------------------
-# 1. TROUVER LES FICHIERS DU PROJET
-# --------------------------------------------------
-
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(DOSSIER)
 
@@ -20,22 +16,17 @@ CHEMIN_LIB_RBF = os.path.join(
 CHEMIN_LIB_PMC = os.path.join(
     RACINE, "C-algorithms", "ETAPE3.multiLayersPerceptron.so"
 )
-
 DOSSIER_MODELES = os.path.join(DOSSIER, "modeles")
-
 NOMS_CLASSES = ["plastique", "verre", "metal"]
 
-# Type utilisé pour envoyer des tableaux de nombres à la bibliothèque C.
 P_DOUBLE = ctypes.POINTER(ctypes.c_double)
-
 
 # --------------------------------------------------
 # CHARGER RBF LIBRARY
 # --------------------------------------------------
-
 lib_rbf = ctypes.CDLL(CHEMIN_LIB_RBF)
 
-# Décrire les arguments de la fonction C rbf_charger.
+# Décrire les arguments de la fonction rbf_charger.
 lib_rbf.rbf_charger.argtypes = [
     ctypes.c_char_p,
     P_DOUBLE,
@@ -59,7 +50,6 @@ lib_rbf.compute_dot_proximity_to_centroids.argtypes = [
 lib_rbf.compute_dot_proximity_to_centroids.restype = None
 
 # Décrire les arguments de la fonction qui calcule le score final.
-# Le nom doit correspondre à celui défini dans ton fichier C.
 lib_rbf.calculer_dot_output.argtypes = [
     ctypes.c_int,
     P_DOUBLE,
@@ -68,11 +58,9 @@ lib_rbf.calculer_dot_output.argtypes = [
 
 lib_rbf.calculer_dot_output.restype = ctypes.c_double
 
-
 # --------------------------------------------------
 # CHARGER PMC LIBRARY
 # --------------------------------------------------
-
 lib_pmc = ctypes.CDLL(CHEMIN_LIB_PMC)
 
 lib_pmc.pmc_charger.argtypes = [
@@ -82,7 +70,6 @@ lib_pmc.pmc_charger.argtypes = [
     ctypes.POINTER(P_DOUBLE),
     ctypes.POINTER(P_DOUBLE)
 ]
-
 lib_pmc.pmc_charger.restype = ctypes.c_int
 
 lib_pmc.pmc_predire.argtypes = [
@@ -96,11 +83,9 @@ lib_pmc.pmc_predire.argtypes = [
 
 lib_pmc.pmc_predire.restype = ctypes.c_int
 
-
 # --------------------------------------------------
 # CHARGER LE MODELE PMC
 # --------------------------------------------------
-
 def charger_modele_pmc():
     chemin = os.path.join(DOSSIER_MODELES, "pmc_weights.txt")
     if not os.path.isfile(chemin):
@@ -122,12 +107,8 @@ def charger_modele_pmc():
     biases = []
 
     for i in range(nb_couches - 1):
-        weights.append(
-            np.zeros(dimensions[i] * dimensions[i + 1], dtype=np.float64)
-        )
-        biases.append(
-            np.zeros(dimensions[i + 1], dtype=np.float64)
-        )
+        weights.append(np.zeros(dimensions[i] * dimensions[i + 1], dtype=np.float64))
+        biases.append(np.zeros(dimensions[i + 1], dtype=np.float64))
 
     weights_ptrs = (P_DOUBLE * (nb_couches - 1))()
     biases_ptrs = (P_DOUBLE * (nb_couches - 1))()
@@ -167,19 +148,16 @@ MODELE_PMC = charger_modele_pmc()
 # --------------------------------------------------
 # CALCULER LES SCORES DU PMC
 # --------------------------------------------------
-
 def calculer_scores_pmc(vecteur):
-
     if MODELE_PMC is None:
         raise ValueError("Le modèle PMC n'est pas chargé.")
-
     vecteur = np.ascontiguousarray(vecteur, dtype=np.float64)
 
     dimensions = MODELE_PMC["dimensions"]
     nb_couches = MODELE_PMC["nb_couches"]
 
     if vecteur.ndim != 1 or len(vecteur) != dimensions[0]:
-        raise ValueError("Le PMC attend 12 valeurs en entrée.")
+        raise ValueError("Le PMC attend {dimensions[0]} valeurs en entrée.")
 
     if not np.isfinite(vecteur).all():
         raise ValueError("Le vecteur contient des valeurs invalides.")
@@ -206,15 +184,10 @@ def calculer_scores_pmc(vecteur):
 # --------------------------------------------------
 # 3. CHARGER UN MODELE RBF
 # --------------------------------------------------
-
 def charger_modele_rbf(nom):
-
-    # Exemple : app/modeles/rbf_plastique.txt
     chemin = os.path.join(
         DOSSIER_MODELES, "rbf_" + nom + ".txt"
     )
-
-    # Vérifier que le fichier existe.
     if not os.path.isfile(chemin):
         return None
 
@@ -272,12 +245,10 @@ def charger_modele_rbf(nom):
 # --------------------------------------------------
 # 4. CHARGER LES TROIS MODELES AU DEMARRAGE
 # --------------------------------------------------
-
 MODELES = {}
 
 for nom in NOMS_CLASSES:
     modele = charger_modele_rbf(nom)
-
     if modele is not None:
         MODELES[nom] = modele
 
@@ -285,17 +256,13 @@ for nom in NOMS_CLASSES:
 # --------------------------------------------------
 # 5. CALCULER LE SCORE D'UN MODELE
 # --------------------------------------------------
-
 def calculer_score(modele, vecteur):
-
-    # Convertir le vecteur en tableau de nombres compatible avec C.
     vecteur = np.ascontiguousarray(vecteur, dtype=np.float64)
-
     k = modele["k"]
     dimensions = modele["dimensions"]
     
     # Tableau qui contiendra la proximité avec chaque centroïde.
-    proximites = np.zeros(k, dtype=np.float64)
+    dot_proximity_to_centroids = np.zeros(k, dtype=np.float64)
 
     # Calculer les activations RBF grâce à la fonction C.
     lib_rbf.compute_dot_proximity_to_centroids(
@@ -304,46 +271,37 @@ def calculer_score(modele, vecteur):
         k,
         modele["centroids"].ctypes.data_as(P_DOUBLE),
         modele["sigma"],
-        proximites.ctypes.data_as(P_DOUBLE)
+        dot_proximity_to_centroids.ctypes.data_as(P_DOUBLE)
     )
 
-    # Combiner les activations avec les poids appris.
     score = lib_rbf.calculer_dot_output(
         k,
-        proximites.ctypes.data_as(P_DOUBLE),
+        dot_proximity_to_centroids.ctypes.data_as(P_DOUBLE),
         modele["poids"].ctypes.data_as(P_DOUBLE)
     )
-
     return float(score)
 
 
 # --------------------------------------------------
 # 6. VERIFIER QUE LE SERVEUR FONCTIONNE
 # --------------------------------------------------
-
 @app.route("/ping", methods=["GET"])
 def ping():
-
     return jsonify({
         "message": "Le serveur RBF fonctionne",
         "modeles_charges": list(MODELES.keys())
     })
 
-
 # --------------------------------------------------
 # 7. PREDIRE LA CLASSE D'UN VECTEUR
 # --------------------------------------------------
-
 @app.route("/predict", methods=["POST"])
 def predict():
-
-    # Vérifier que des modèles ont été chargés.
     if len(MODELES) == 0:
         return jsonify({
             "erreur": "Aucun modèle chargé. Entraîne les modèles avant."
         }), 503
 
-    # Récupérer les données envoyées par le client.
     donnees = request.get_json(silent=True)
 
     if not isinstance(donnees, dict):
@@ -356,7 +314,6 @@ def predict():
             "erreur": "Le champ vecteur est obligatoire."
         }), 400
 
-    # Transformer les données reçues en nombres.
     try:
         vecteur = np.asarray(
             donnees["vecteur"], dtype=np.float64
@@ -387,7 +344,6 @@ def predict():
                       + str(dimensions) + " valeurs."
         }), 400
 
-    # Calculer le score de chaque classe.
     scores = {}
 
     for nom in MODELES:
@@ -395,10 +351,8 @@ def predict():
         score = calculer_score(modele, vecteur)
         scores[nom] = score
 
-    # Choisir la classe qui possède le score le plus élevé.
     classe = max(scores, key=scores.get)
 
-    # Envoyer la prédiction au client.
     return jsonify({
         "classe": classe,
         "scores": scores
@@ -415,9 +369,7 @@ def accueil():
     return render_template("index.html")
 
 
-# --------------------------------------------------
-# PREDICTION PMC A PARTIR D'UN VECTEUR
-# --------------------------------------------------
+# Prédiction PMC avec vecteur
 @app.route("/predict-pmc-vecteur", methods=["POST"])
 def predict_pmc():
 
@@ -445,9 +397,7 @@ def predict_pmc():
         return jsonify({"erreur": str(e)}), 400
 
 
-# --------------------------------------------------
-# PREDICTION PMC A PARTIR D'UNE IMAGE
-# --------------------------------------------------
+# Prédiction PMC avec image
 @app.route("/predict-image-pmc", methods=["POST"])
 def predict_image_pmc():
 
@@ -483,16 +433,11 @@ def predict_image_pmc():
         return jsonify({"erreur": str(e)}), 400
 
     
-
-# --------------------------------------------------
-# PREDICTION RBF A PARTIR D'UNE IMAGE
-# --------------------------------------------------
+# Prédiction PMC avec image 
 @app.route("/predict-image-rbf", methods=["POST"])
 def predict_image():
-
     if "image" not in request.files:
         return jsonify({"erreur": "Aucune image reçue"}), 400
-
     try:
         fichier = request.files["image"]
 
