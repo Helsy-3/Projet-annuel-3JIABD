@@ -61,8 +61,7 @@ int nb_features_transformees(int n_features)
 // Ajoute les produits croises (x_a * x_b) a chaque exemple du dataset. C'est cette seule
 // caracteristique en plus (x1*x2 pour XOR) qui rend le probleme lineairement separable,
 // sans changer l'algorithme du perceptron lui-meme.
-void transformer(double *vecteurs, int n_exemples, int n_features, double *transformes)
-{
+void transformer(double *vecteurs, int n_exemples, int n_features, double *transformes){
     int n_out = nb_features_transformees(n_features);
     for (int i = 0; i < n_exemples; i++)
     {
@@ -80,8 +79,7 @@ void transformer(double *vecteurs, int n_exemples, int n_features, double *trans
 // Transforme les donnees puis entraine un perceptron classique dessus - pas un nouvel
 // algorithme, juste un pretraitement avant d'appeler entrainer_perceptron().
 int entrainer_perceptron_transforme(double *vecteurs, int *labels, int n_exemples, int n_features,
-                                    double learning_rate, int max_iter, double *weights, double *bias)
-{
+                                    double learning_rate, int max_iter, double *weights, double *bias){
     int n_out = nb_features_transformees(n_features);
     double *transformes = malloc(n_exemples * n_out * sizeof(double));
     transformer(vecteurs, n_exemples, n_features, transformes);

@@ -3,6 +3,7 @@
 
 int train_basic_perceptron(
     double *dataset_one_long_vector,
+    /* double : un nombre décimal (ex. 2.5, 0.75, -1.2). */
     int *expected_targets,
     int dataset_length,
     int vector_length,
@@ -53,6 +54,16 @@ int train_basic_perceptron(
     }
     return post_training_errors;
 }
+
+int output_basic_perceptron(double *vector, int vector_length, double *weights_array, double biais){
+    double unique_neurone_score = 0.0;
+    for(int a = 0; a < vector_length; a++){
+            unique_neurone_score += vector[a] * weights_array[a];
+    }
+    unique_neurone_score += biais;
+    return unique_neurone_score;
+}
+
 
 // Sauvegarde les poids et le biais appris dans un fichier texte, pour les reutiliser plus tard
 // sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
