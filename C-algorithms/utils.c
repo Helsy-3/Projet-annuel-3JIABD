@@ -63,7 +63,7 @@ double rbf_distance(double distance, double sigma){
 
 // calculer_dot_outpu() peut retourner 9000, 500, -3000, 0.5, etc.
 
-double calculer_dot_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
+double calculer_rbf_dot_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
     double dot_output = 0.0;
     for (int i = 0; i < K; i++){
         dot_output += weights[i] * dot_proximity_to_centroids[i];
@@ -72,17 +72,21 @@ double calculer_dot_output(int K, double dot_proximity_to_centroids[K], double w
 }
 
 // Perceptron multi couche function
+// Trouver quel neurone de la couche de sortie a obtenu le score le plus élevé, 
+// afin de déterminer la classe prédite par ton PMC.
+
+
 int find_strongest_category_by_neurone_score(double *couche_sortie, int output_length)
 {
     if (couche_sortie == NULL || output_length <= 0)
         return -1;
     int promising_neurone_index = 0;
 
-    for (int neurone_index = 1; neurone_index < output_length; neurone_index++)
+    for (int neurone = 1; neurone < output_length; neurone++)
     {
-        if (couche_sortie[neurone_index] > couche_sortie[promising_neurone_index])
+        if (couche_sortie[neurone] > couche_sortie[promising_neurone_index])
         {
-            promising_neurone_index = neurone_index;
+            promising_neurone_index = neurone;
         }
     }
     return promising_neurone_index;
