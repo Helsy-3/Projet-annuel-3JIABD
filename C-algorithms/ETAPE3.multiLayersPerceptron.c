@@ -504,7 +504,7 @@ int train_PMC(double *dataset, int dataset_length,
     }
 
     // Étape 3 : compter les bonnes prédictions après l'entraînement.
-    int bonnes_predictions = 0;
+    int nombre_bonnes_predictions = 0;
     for (int picture = 0; picture < dataset_length; picture++)
     {
         for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
@@ -525,11 +525,9 @@ int train_PMC(double *dataset, int dataset_length,
                 biases[couche_index - 1]);
         }
 
-        if (find_strongest_category_by_neurone_score(
-                neurones_by_layer_array[nb_couches - 1],
-                output_length) == predictions_by_categories[picture])
+        if (find_strongest_category_by_neurone_score(neurones_by_layer_array[nb_couches - 1], output_length) == predictions_by_categories[picture])
         {
-            bonnes_predictions++;
+            nombre_bonnes_predictions++;
         }
     }
 
@@ -540,7 +538,7 @@ int train_PMC(double *dataset, int dataset_length,
 
     free(neurones_by_layer_array);
 
-    return bonnes_predictions;
+    return nombre_bonnes_predictions;
 }
 
 int train_pmc_dataset(
