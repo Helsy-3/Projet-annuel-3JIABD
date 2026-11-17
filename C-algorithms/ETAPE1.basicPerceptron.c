@@ -42,7 +42,7 @@ int train_basic_perceptron(
     for (int i = 0; i < dataset_length; i++){
         double sortie = *bias;
         for (int j = 0; j < vector_length; j++)
-            sortie += dataset_one_long_vector[i * dataset_length + j] * weights[j];
+            sortie += dataset_one_long_vector[i * vector_length + j] * weights[j];
             int prediction = 0;
             if(sortie >= 0){
                 prediction = 1;
@@ -55,7 +55,7 @@ int train_basic_perceptron(
     return post_training_errors;
 }
 
-int output_basic_perceptron(double *vector, int vector_length, double *weights_array, double biais){
+double output_basic_perceptron(double *vector, int vector_length, double *weights_array, double biais){
     double unique_neurone_score = 0.0;
     for(int a = 0; a < vector_length; a++){
             unique_neurone_score += vector[a] * weights_array[a];
