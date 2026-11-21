@@ -60,3 +60,39 @@ int entrainer_perceptron_transforme_dataset(double *dataset, int *Y, int dataset
     free(new_vecteur_array);
     return erreurs;
 }
+
+int predict_perceptron(double *vecteur, int vector_length, double *weights, double biais){
+    double somme = biais;
+
+    for (int i = 0; i < vector_length; i++){
+        somme += vecteur[i] * weights[i];
+    }
+    return somme >= 0 ? 1 : 0;
+}
+
+int predict_xor(double *X, int dataset_length, int vector_length, double *weights, double bias, int *predictions) {
+    for (int i = 0; i < dataset_length; i++) {
+        double *current_dot = &X[i * vector_length];
+        predictions[i] = predict_perceptron(
+            current_dot,
+            vector_length,
+            weights,
+            bias
+        );
+    }
+    return 0;
+}
+
+int predict_xor_transforme(double *X, int dataset_length, int vector_length, double *weights, double bias, int *predictions) {
+    int output_length = from_two_to_three_dimensions(vector_length);
+    double *new_dataset = malloc(dataset_length * output_length * sizeof(double));
+    
+    if (new_dataset == NULL) {
+        return -1;
+    }
+
+    add_3rd_dimension_to_dataset(X, vector_length, dataset_length, new_dataset);
+    predict_xor(new_dataset, dataset_length, output_length, weights, bias, predictions);
+    free(new_dataset);
+    return 0;
+}
