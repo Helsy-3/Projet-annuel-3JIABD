@@ -2,9 +2,8 @@
 #include <string.h>
 
 int train_basic_perceptron(
-    double *dataset_one_long_vector,
-    /* double : un nombre décimal (ex. 2.5, 0.75, -1.2). */
-    int *expected_targets,
+    double *X, /* double : un nombre décimal (ex. 2.5, 0.75, -1.2). */
+    int *Y,
     int dataset_length,
     int vector_length,
     double learning_rate,
@@ -18,7 +17,7 @@ int train_basic_perceptron(
         for (int i = 0; i < dataset_length; i++){
             double linear_output = *bias;
             for (int j = 0; j < vector_length; j++)
-                linear_output += dataset_one_long_vector[i * vector_length + j] * weights[j];
+                linear_output += X[i * vector_length + j] * weights[j];
                 int prediction = 0;
                 if(linear_output >= 0){
                     prediction = 1;
@@ -26,10 +25,10 @@ int train_basic_perceptron(
                     prediction = -1;
                 }
 
-            if (prediction != expected_targets[i]){
+            if (prediction != Y[i]){
                 for (int j = 0; j < vector_length; j++)
-                    weights[j] += learning_rate * expected_targets[i] * dataset_one_long_vector[i * vector_length + j];
-                *bias += learning_rate * expected_targets[i];
+                    weights[j] += learning_rate * Y[i] * X[i * vector_length + j];
+                *bias += learning_rate * Y[i];
                 total_errors++;
             }
         }
@@ -42,14 +41,14 @@ int train_basic_perceptron(
     for (int i = 0; i < dataset_length; i++){
         double sortie = *bias;
         for (int j = 0; j < vector_length; j++)
-            sortie += dataset_one_long_vector[i * vector_length + j] * weights[j];
+            sortie += X[i * vector_length + j] * weights[j];
             int prediction = 0;
             if(sortie >= 0){
                 prediction = 1;
             } else {
                 prediction = -1;
             }
-        if (prediction != expected_targets[i])
+        if (prediction != Y[i])
             post_training_errors++;
     }
     return post_training_errors;

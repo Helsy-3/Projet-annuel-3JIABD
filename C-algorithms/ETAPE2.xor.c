@@ -14,21 +14,6 @@ int train_basic_perceptron(
     double *bias
 );
 
-int run_basic_perceptron_on_xor(double *X, int *Y, int dataset_length, int vector_length, double learning_rate, int epochs, double *poids, double *biais){
-    int erreurs = train_basic_perceptron(
-        X,
-        Y,
-        dataset_length,
-        vector_length,
-        learning_rate,
-        epochs,
-        poids,
-        biais
-    );
-    printf("Erreurs XOR brut : %d/4\n", erreurs);
-    return erreurs;
-}
-
 
 int from_two_to_three_dimensions(int nb_dot_dimensions){
     return nb_dot_dimensions + nb_dot_dimensions * (nb_dot_dimensions - 1) / 2;
