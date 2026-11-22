@@ -148,19 +148,12 @@ void compute_dot_proximity_to_centroids(
     int K,
     double centroids_array[K][vector_dimensions],
     double gamma,
-    double dot_proximity_to_centroids[K])
-{
-    for (int centroid = 0; centroid < K; centroid++)
-    {
+    double dot_proximity_to_centroids[K]){
+    for (int centroid = 0; centroid < K; centroid++){
         double distance_carre = 0.0;
 
-        for (int dimension = 0;
-             dimension < vector_dimensions;
-             dimension++)
-        {
-            double difference =
-                dot[dimension] - centroids_array[centroid][dimension];
-
+        for (int dimension = 0; dimension < vector_dimensions; dimension++){
+            double difference = dot[dimension] - centroids_array[centroid][dimension];
             distance_carre += difference * difference;
         }
 
