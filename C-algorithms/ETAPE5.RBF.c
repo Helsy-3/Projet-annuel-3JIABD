@@ -5,7 +5,7 @@
 #include "utils.h"
 
 // ETAPE 1 : Initialiser les centroïdes de façon aléatoire.
-void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns])
+void find_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions])
 {
     // K est le nombre de centroïdes que l'on souhaite obtenir.
     // On tire les points SANS REMISE (mélange de Fisher-Yates) : si le même point était choisi deux fois,
@@ -22,8 +22,7 @@ void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset
         indices[i] = indices[r];
         indices[r] = tmp;
         int random_centroid = indices[i];
-        for (int j = 0; j < dataset_columns; j++)
-        {
+        for (int j = 0; j < vector_dimensions; j++){
             centroids_array[i][j] = dataset_array[random_centroid][j];
         }
     }
@@ -31,7 +30,7 @@ void find_centroids(int K, int dataset_rows, int dataset_columns, double dataset
 }
 
 // ETAPE 2 : Assigner les points du dataset au centroïde le plus proche en calculant la distance euclidienne de chaque point à chacun des centroïdes.
-void assign_clusters(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double centroids_array[K][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K])
+void assign_clusters(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K])
 {
     for (int i = 0; i < K; i++)
     {
@@ -39,7 +38,7 @@ void assign_clusters(int K, int dataset_rows, int dataset_columns, double datase
     }
     for (int i = 0; i < dataset_rows; i++)
     {
-        int closest_centroid_index = calculer_closest_centroid(dataset_array[i], K, dataset_columns, centroids_array);
+        int closest_centroid_index = calculer_closest_centroid(dataset_array[i], K, vector_dimensions, centroids_array);
         int dot_cluster_index = cluster_sizes[closest_centroid_index]; // On regarde combien de points sont déjà dans ce cluster
         clusters_array[closest_centroid_index][dot_cluster_index] = i; // On ajoute le point au cluster
         cluster_sizes[closest_centroid_index]++;                       // Le cluster contient maintenant un point de plus
@@ -47,14 +46,14 @@ void assign_clusters(int K, int dataset_rows, int dataset_columns, double datase
 }
 
 // ETAPE 3 : Pour chaque cluster, la moyenne de tous les points devient le nouveau centroïde.
-void update_centroids(int K, int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][dataset_columns])
+void update_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][vector_dimensions])
 {
     for (int cluster_index = 0; cluster_index < K; cluster_index++)
     { // Pour chaque cluster
         if (cluster_sizes[cluster_index] == 0)
             continue; // Cluster vide : on garde l'ancien centroïde (sinon 0/0 = NaN)
 
-        for (int dimension = 0; dimension < dataset_columns; dimension++)
+        for (int dimension = 0; dimension < vector_dimensions; dimension++)
         { // Pour chaque dimension d'un point
             double sum = 0.0;
             // Parcourir tous les points du cluster
@@ -73,7 +72,7 @@ void update_centroids(int K, int dataset_rows, int dataset_columns, double datas
 
 // ETAPE 4: Le sigma représente la moyenne de la somme des distances entre chaque centroïde et son voisin le PLUS PROCHE.
 // Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
-double calculer_sigma(int K, int dataset_columns, double centroids_array[K][dataset_columns])
+double calculer_sigma(int K, int vector_dimensions, double centroids_array[K][vector_dimensions])
 {
     double distances_sum = 0.0;
     for (int current_centroïd = 0; current_centroïd < K; current_centroïd++)
@@ -85,7 +84,7 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
                 continue;
             double neighboor_distance = 0.0;
             // On parcourt toutes les dimensions
-            for (int vecteur_dimension = 0; vecteur_dimension < dataset_columns; vecteur_dimension++)
+            for (int vecteur_dimension = 0; vecteur_dimension < vector_dimensions; vecteur_dimension++)
             {
                 double difference = centroids_array[current_centroïd][vecteur_dimension] - centroids_array[other_centroïd][vecteur_dimension];
                 neighboor_distance += fabs(difference);
@@ -108,13 +107,13 @@ double calculer_sigma(int K, int dataset_columns, double centroids_array[K][data
 }
 
 // ETAPE 5 : Calculer la distance d'un point par rapport au centre avec RBF
-void compute_dot_proximity_to_centroids(int dataset_columns, double dot[dataset_columns], int K, double centroids_array[K][dataset_columns], double sigma, double dot_proximity_to_centroids[K])
+void compute_dot_proximity_to_centroids(int vector_dimensions, double dot[vector_dimensions], int K, double centroids_array[K][vector_dimensions], double sigma, double dot_proximity_to_centroids[K])
 {
     for (int centroid = 0; centroid < K; centroid++)
     {
         double distance_carre = 0;
 
-        for (int dimension = 0; dimension < dataset_columns; dimension++)
+        for (int dimension = 0; dimension < vector_dimensions; dimension++)
         {
             double difference = dot[dimension] - centroids_array[centroid][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
             distance_carre += difference * difference;
@@ -125,7 +124,7 @@ void compute_dot_proximity_to_centroids(int dataset_columns, double dot[dataset_
 }
 
 // ETAPE 6 : Entrainer les poids rétro-activement
-void recursive_train_weights(int K, int dataset_length, int dataset_columns, double dataset_array[dataset_length][dataset_columns], double target_predictions[dataset_length], double centroids_array[K][dataset_columns], double sigma, double weights[K], double learning_rate, int epochs)
+void recursive_train_weights(int K, int dataset_length, int vector_dimensions, double dataset_array[dataset_length][vector_dimensions], double target_predictions[dataset_length], double centroids_array[K][vector_dimensions], double sigma, double weights[K], double learning_rate, int epochs)
 {
     double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
     for (int epoch = 0; epoch < epochs; epoch++)
@@ -133,7 +132,7 @@ void recursive_train_weights(int K, int dataset_length, int dataset_columns, dou
         double total_error = 0.0;
         for (int i = 0; i < dataset_length; i++)
         { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
-            compute_dot_proximity_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+            compute_dot_proximity_to_centroids(vector_dimensions, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
             double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
             double error = output - target_predictions[i];
             total_error += error * error;
@@ -147,7 +146,7 @@ void recursive_train_weights(int K, int dataset_length, int dataset_columns, dou
     }
 }
 
-void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_rows][dataset_columns], double targets[dataset_rows], int cluster_size)
+void RBF(int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double targets[dataset_rows], int cluster_size)
 {
     // step 0: init phase
     size_t dataset_size = dataset_rows;
@@ -155,46 +154,46 @@ void RBF(int dataset_rows, int dataset_columns, double dataset_array[dataset_row
     size_t weight_nb = K;                // un poids par centroide, pas par caracteristique d'entree
     double weights[weight_nb];
     memset(weights, 0, sizeof(weights));        // on initialise le tableau de poids à 0.
-    double centroids_array[K][dataset_columns]; // centroids_array = K centroids, then for each point in the centroïd vector, we use dataset_columns dimensions
+    double centroids_array[K][vector_dimensions]; // centroids_array = K centroids, then for each point in the centroïd vector, we use dataset_columns dimensions
     int clusters_array[K][dataset_rows];        // NOTE:  clusters_array ne stocke pas les vecteurs. Il stocke seulement les indices des vecteurs.
     int cluster_sizes[K];                       // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]. Ce qui signifie : cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
 
     // step 1: find centroids and assign clusters
-    find_centroids(K, dataset_rows, dataset_columns, dataset_array, centroids_array);
+    find_centroids(K, dataset_rows, vector_dimensions, dataset_array, centroids_array);
     int max_iterations = 100;
     for (int iteration = 0; iteration < max_iterations; iteration++){
-        assign_clusters(K, dataset_rows, dataset_columns, dataset_array, centroids_array, clusters_array, cluster_sizes);
-        update_centroids(K, dataset_rows, dataset_columns, dataset_array, clusters_array, cluster_sizes, centroids_array);
+        assign_clusters(K, dataset_rows, vector_dimensions, dataset_array, centroids_array, clusters_array, cluster_sizes);
+        update_centroids(K, dataset_rows, vector_dimensions, dataset_array, clusters_array, cluster_sizes, centroids_array);
     }
 
     // step 2: entrainer le modèle
 
     // Calcul de sigma
-    double sigma = calculer_sigma(K, dataset_columns, centroids_array);
+    double sigma = calculer_sigma(K, vector_dimensions, centroids_array);
 
     // apprentissage des poids
     double learning_rate = 0.01;
     int epochs = 1000;
-    recursive_train_weights(K, dataset_rows, dataset_columns, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
+    recursive_train_weights(K, dataset_rows, vector_dimensions, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
 
     double dot_proximity_to_centroids[K]; // ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
     printf("\nResultats :\n");
     for (int i = 0; i < dataset_rows; i++)
     {
-        compute_dot_proximity_to_centroids(dataset_columns, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
+        compute_dot_proximity_to_centroids(vector_dimensions, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
         double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
         printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
     }
 }
 
 // Sauvegarde les centroides, le sigma et les poids appris dans un fichier texte, pour les reutiliser plus tard sans avoir a ré-entrainer (meme principe que svm_sauvegarder() dans ETAPE4.svm.c).
-int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double *weights, int K, int dataset_columns)
+int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double *weights, int K, int vector_dimensions)
 {
     FILE *f = fopen(chemin, "w");
     if (f == NULL)
         return -1;
-    fprintf(f, "%d %d %.17g\n", K, dataset_columns, sigma);
-    for (int i = 0; i < K * dataset_columns; i++)
+    fprintf(f, "%d %d %.17g\n", K, vector_dimensions, sigma);
+    for (int i = 0; i < K * vector_dimensions; i++)
         fprintf(f, "%.17g ", centroids[i]);
     fprintf(f, "\n");
     for (int i = 0; i < K; i++)
@@ -204,18 +203,18 @@ int rbf_sauvegarder(const char *chemin, double *centroids, double sigma, double 
     return 0;
 }
 
-int rbf_charger(const char *chemin, double *centroids, double *weights, int *K, int *dataset_columns, double *sigma)
+int rbf_charger(const char *chemin, double *centroids, double *weights, int *K, int *vector_dimensions, double *sigma)
 {
     FILE *f = fopen(chemin, "r");
     if (f == NULL)
         return -1;
 
-    if (fscanf(f, "%d %d %lf", K, dataset_columns, sigma) != 3)
+    if (fscanf(f, "%d %d %lf", K, vector_dimensions, sigma) != 3)
     {
         fclose(f);
         return -1;
     }
-    for (int i = 0; i < (*K) * (*dataset_columns); i++)
+    for (int i = 0; i < (*K) * (*vector_dimensions); i++)
         if (fscanf(f, "%lf", &centroids[i]) != 1)
         {
             fclose(f);
