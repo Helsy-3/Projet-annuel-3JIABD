@@ -70,119 +70,219 @@ void update_centroids(int K, int dataset_rows, int vector_dimensions, double dat
     }
 }
 
-// ETAPE 4: Le sigma représente la moyenne de la somme des distances entre chaque centroïde et son voisin le PLUS PROCHE.
-// Le sigma détermine à quel point le modèle est sensible à la distance entre deux points.
-double calculer_sigma(int K, int vector_dimensions, double centroids_array[K][vector_dimensions])
+
+/* ETAPE 4 : Calculer Gamma.
+   On calcule la distance moyenne entre chaque centroïde
+   et son voisin le plus proche.
+   Puis on convertit cette distance en Gamma :
+   gamma = 1 / (2 * sigma * sigma).
+*/
+
+double calculer_gamma(
+    int K,
+    int vector_dimensions,
+    double centroids_array[K][vector_dimensions])
 {
+    // Il faut au moins deux centroïdes.
+    if (K < 2)
+        return -1.0;
+
     double distances_sum = 0.0;
-    for (int current_centroïd = 0; current_centroïd < K; current_centroïd++)
+
+    for (int current_centroid = 0;
+         current_centroid < K;
+         current_centroid++)
     {
-        double min_neighboor_distance = INFINITY;
-        for (int other_centroïd = 0; other_centroïd < K; other_centroïd++)
+        double min_neighbor_distance = INFINITY;
+
+        for (int other_centroid = 0;
+             other_centroid < K;
+             other_centroid++)
         {
-            if (other_centroïd == current_centroïd) // Ignorer soi-même
+            if (other_centroid == current_centroid)
                 continue;
-            double neighboor_distance = 0.0;
-            // On parcourt toutes les dimensions
-            for (int vecteur_dimension = 0; vecteur_dimension < vector_dimensions; vecteur_dimension++)
+
+            double distance_carre = 0.0;
+
+            // Calcul de la distance euclidienne au carré.
+            for (int dimension = 0;
+                 dimension < vector_dimensions;
+                 dimension++)
             {
-                double difference = centroids_array[current_centroïd][vecteur_dimension] - centroids_array[other_centroïd][vecteur_dimension];
-                neighboor_distance += fabs(difference);
+                double difference =
+                    centroids_array[current_centroid][dimension]
+                    - centroids_array[other_centroid][dimension];
+
+                distance_carre += difference * difference;
             }
 
-            // On conserve la plus petite distance
-            if (neighboor_distance < min_neighboor_distance)
+            double neighbor_distance = sqrt(distance_carre);
+
+            if (neighbor_distance < min_neighbor_distance)
             {
-                min_neighboor_distance = neighboor_distance;
+                min_neighbor_distance = neighbor_distance;
             }
         }
 
-        // On ajoute la distance au plus proche voisin à la somme
-        distances_sum += min_neighboor_distance;
+        distances_sum += min_neighbor_distance;
     }
 
-    // On calcule la distance moyenne entre les centroïdes et leur plus proche voisin
+    // Distance moyenne entre les centroïdes et leurs voisins.
     double sigma = distances_sum / K;
-    return sigma;
+
+    if (sigma <= 0.0)
+        return -1.0;
+
+    // Conversion de Sigma vers Gamma.
+    double gamma = 1.0 / (2.0 * sigma * sigma);
+
+    return gamma;
 }
 
-// ETAPE 5 : Calculer la distance d'un point par rapport au centre avec RBF
-void compute_dot_proximity_to_centroids(int vector_dimensions, double dot[vector_dimensions], int K, double centroids_array[K][vector_dimensions], double sigma, double dot_proximity_to_centroids[K])
+/* ETAPE 5 : Calculer la proximité d'un point
+   par rapport à chaque centroïde avec RBF.
+*/
+void compute_dot_proximity_to_centroids(
+    int vector_dimensions,
+    double dot[vector_dimensions],
+    int K,
+    double centroids_array[K][vector_dimensions],
+    double gamma,
+    double dot_proximity_to_centroids[K])
 {
     for (int centroid = 0; centroid < K; centroid++)
     {
-        double distance_carre = 0;
+        double distance_carre = 0.0;
 
-        for (int dimension = 0; dimension < vector_dimensions; dimension++)
+        for (int dimension = 0;
+             dimension < vector_dimensions;
+             dimension++)
         {
-            double difference = dot[dimension] - centroids_array[centroid][dimension]; // Pour chaque centroïde, on calcule la distance entre le point et le centroïde
+            double difference =
+                dot[dimension] - centroids_array[centroid][dimension];
+
             distance_carre += difference * difference;
         }
-        double distance_to_centroid = sqrt(distance_carre);                               // On obtient la distance
-        dot_proximity_to_centroids[centroid] = rbf_distance(distance_to_centroid, sigma); // On transforme chaque distance du point au centroïde en une valeur d'activation RBF
+
+        // Application de la fonction gaussienne du cours.
+        dot_proximity_to_centroids[centroid] =
+            exp(-gamma * distance_carre);
     }
 }
 
-// ETAPE 6 : Entrainer les poids rétro-activement
-void recursive_train_weights(int K, int dataset_length, int vector_dimensions, double dataset_array[dataset_length][vector_dimensions], double target_predictions[dataset_length], double centroids_array[K][vector_dimensions], double sigma, double weights[K], double learning_rate, int epochs)
-{
-    double dot_proximity_to_centroids[K]; // rbf_closeness est réécrit pour chaque point
-    for (int epoch = 0; epoch < epochs; epoch++)
-    {
+
+/* ETAPE 6 : Entrainer les poids rétro-activement */
+void recursive_train_weights(int K, int dataset_length, int vector_dimensions, double dataset_array[dataset_length][vector_dimensions], double target_predictions[dataset_length], double centroids_array[K][vector_dimensions], double gamma, double weights[K], double learning_rate,int epochs){
+    double dot_proximity_to_centroids[K];
+
+    for (int epoch = 0; epoch < epochs; epoch++){
         double total_error = 0.0;
-        for (int i = 0; i < dataset_length; i++)
-        { // pour un point dans le dataset (dataset_array[i], on calcule sa proximité avec les centroides, puis on l'utilise pour calculer l'output)
-            compute_dot_proximity_to_centroids(vector_dimensions, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
-            double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
+
+        for (int i = 0; i < dataset_length; i++){
+            compute_dot_proximity_to_centroids(
+                vector_dimensions,
+                dataset_array[i],
+                K,
+                centroids_array,
+                gamma,
+                dot_proximity_to_centroids
+            );
+
+            double output = calculer_rbf_dot_output(
+                K,
+                dot_proximity_to_centroids,
+                weights
+            );
+
             double error = output - target_predictions[i];
+
             total_error += error * error;
-            for (int centroid = 0; centroid < K; centroid++)
-            {
-                weights[centroid] -= learning_rate * 2.0 * error * dot_proximity_to_centroids[centroid];
+
+            for (int centroid = 0; centroid < K; centroid++){
+                weights[centroid] -=
+                    learning_rate * 2.0 * error
+                    * dot_proximity_to_centroids[centroid];
             }
         }
-        double mse = total_error / dataset_length; // Erreur moyenne
+
+        double mse = total_error / dataset_length;
         printf("Epoch %d - MSE = %f\n", epoch, mse);
     }
 }
 
-void RBF(int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double targets[dataset_rows], int cluster_size)
-{
-    // step 0: init phase
+void RBF(int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double targets[dataset_rows],int cluster_size){
+    
+    // STEP 0 : Initialisation
     size_t dataset_size = dataset_rows;
-    int K = dataset_size / cluster_size; // K = nombre de clusters.
-    size_t weight_nb = K;                // un poids par centroide, pas par caracteristique d'entree
+    int K = dataset_size / cluster_size;
+    size_t weight_nb = K;
     double weights[weight_nb];
-    memset(weights, 0, sizeof(weights));        // on initialise le tableau de poids à 0.
-    double centroids_array[K][vector_dimensions]; // centroids_array = K centroids, then for each point in the centroïd vector, we use dataset_columns dimensions
-    int clusters_array[K][dataset_rows];        // NOTE:  clusters_array ne stocke pas les vecteurs. Il stocke seulement les indices des vecteurs.
-    int cluster_sizes[K];                       // cluster_sizes = nombre de points dans chaque cluster. Par exemple, si K = 3, alors cluster_sizes pourrait être : [4 | 2 | 3]. Ce qui signifie : cluster 0 contient 4 points, cluster 1 contient 2 points, cluster 2 contient 3 points
+    memset(weights, 0, sizeof(weights));
+    double centroids_array[K][vector_dimensions];
+    int clusters_array[K][dataset_rows];
+    int cluster_sizes[K];
 
-    // step 1: find centroids and assign clusters
+    // STEP 1 : Trouver les centroïdes avec K-means / Lloyd.
     find_centroids(K, dataset_rows, vector_dimensions, dataset_array, centroids_array);
     int max_iterations = 100;
     for (int iteration = 0; iteration < max_iterations; iteration++){
-        assign_clusters(K, dataset_rows, vector_dimensions, dataset_array, centroids_array, clusters_array, cluster_sizes);
-        update_centroids(K, dataset_rows, vector_dimensions, dataset_array, clusters_array, cluster_sizes, centroids_array);
+        assign_clusters(
+            K, dataset_rows, vector_dimensions,
+            dataset_array, centroids_array,
+            clusters_array, cluster_sizes
+        );
+        update_centroids(
+            K, dataset_rows, vector_dimensions,
+            dataset_array, clusters_array,
+            cluster_sizes, centroids_array
+        );
     }
 
-    // step 2: entrainer le modèle
+    // STEP 2 : Calculer Gamma.
+    double gamma = calculer_gamma(
+        K, vector_dimensions, centroids_array
+    );
+    if (gamma <= 0.0){
+        printf("Erreur : impossible de calculer Gamma.\n");
+        return;
+    }
+    printf("Gamma = %f\n", gamma);
 
-    // Calcul de sigma
-    double sigma = calculer_sigma(K, vector_dimensions, centroids_array);
-
-    // apprentissage des poids
+    // STEP 3 : Apprentissage des poids.
     double learning_rate = 0.01;
     int epochs = 1000;
-    recursive_train_weights(K, dataset_rows, vector_dimensions, dataset_array, targets, centroids_array, sigma, weights, learning_rate, epochs);
+    recursive_train_weights(
+        K,
+        dataset_rows,
+        vector_dimensions,
+        dataset_array,
+        targets,
+        centroids_array,
+        gamma,
+        weights,
+        learning_rate,
+        epochs
+    );
 
-    double dot_proximity_to_centroids[K]; // ce tableau contient, pour chaque centroïde, une valeur qui indique à quel point le point étudié lui ressemble ou en est proche.
+    // STEP 4 : Effectuer les prédictions.
+    double dot_proximity_to_centroids[K];
     printf("\nResultats :\n");
-    for (int i = 0; i < dataset_rows; i++)
-    {
-        compute_dot_proximity_to_centroids(vector_dimensions, dataset_array[i], K, centroids_array, sigma, dot_proximity_to_centroids);
-        double output = calculer_dot_output(K, dot_proximity_to_centroids, weights);
-        printf("Point %d : cible = %f, prediction = %f\n", i, targets[i], output);
+    for (int i = 0; i < dataset_rows; i++){
+        compute_dot_proximity_to_centroids(
+            vector_dimensions,
+            dataset_array[i],
+            K,
+            centroids_array,
+            gamma,
+            dot_proximity_to_centroids
+        );
+        double output = calculer_rbf_dot_output(
+            K,
+            dot_proximity_to_centroids,
+            weights
+        );
+        int prediction = (output >= 0.0) ? 1 : -1;
+        printf("Point %d : cible = %f, prediction = %f, classe = %d\n", i, targets[i], output, prediction);
     }
 }
 

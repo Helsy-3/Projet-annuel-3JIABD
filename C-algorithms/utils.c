@@ -54,8 +54,8 @@ return closest_centroid;
 
 // rbf_distance renvoie une valeur de proximité, pas une valeur géométrique
 // Plus la distance est petite, plus la valeur de rbf_distance() est grande.
-double rbf_distance(double distance, double sigma){
-    return exp(-(distance * distance)/ (2.0 * sigma * sigma));
+double rbf_distance(double distance_to_centroid, double sigma){
+    return exp(-(distance_to_centroid * distance_to_centroid)/ (2.0 * sigma * sigma));
 }
 
 // multiplie chaque valeur de proximité du point au centroide par un poids, puis additionne tous les résultats.
