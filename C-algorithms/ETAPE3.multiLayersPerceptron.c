@@ -146,6 +146,149 @@ void calculer_single_layer_output(int layer_before_length, int current_layer_len
     }
 }
 
+
+/* TRAINING PHASE */
+int train_PMC(double *dataset, int dataset_length,
+              int *predictions_by_categories,
+              int nb_couches,
+              int nb_neurones_par_couches[],
+              double **weights,
+              double **biases,
+              int epochs,
+              double learning_rate)
+{
+    if (dataset == NULL ||
+        predictions_by_categories == NULL ||
+        nb_neurones_par_couches == NULL ||
+        weights == NULL ||
+        biases == NULL ||
+        dataset_length <= 0 ||
+        nb_couches < 2 ||
+        epochs <= 0 ||
+        !isfinite(learning_rate) ||
+        learning_rate <= 0.0)
+    {
+        return -1;
+    }
+
+    for (int couche = 0; couche < nb_couches; couche++)
+    {
+        if (nb_neurones_par_couches[couche] <= 0)
+            return -1;
+    }
+
+    for (int couche = 0; couche < nb_couches - 1; couche++)
+    {
+        if (weights[couche] == NULL || biases[couche] == NULL)
+            return -1;
+    }
+
+    int output_length = nb_neurones_par_couches[nb_couches - 1];
+
+    for (int picture = 0; picture < dataset_length; picture++)
+    {
+        if (predictions_by_categories[picture] < 0 ||
+            predictions_by_categories[picture] >= output_length)
+        {
+            return -1;
+        }
+    }
+
+    // Étape 1 : allouer les neurones de chaque couche.
+    double **neurones_by_layer_array = malloc(nb_couches * sizeof(double *));
+
+    if (neurones_by_layer_array == NULL)
+        return -1;
+
+    if (init_couches_cachees_by_layer(nb_couches, nb_neurones_par_couches, neurones_by_layer_array) != 0)
+    {
+        free(neurones_by_layer_array);
+        return -1;
+    }
+
+    int nombre_neurones_par_couche = nb_neurones_par_couches[0];
+
+    // Étape 2 : entraînement.
+    for (int epoch = 0; epoch < epochs; epoch++)
+    {
+        for (int picture = 0; picture < dataset_length; picture++)
+        {
+            for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
+            {
+                neurones_by_layer_array[0][neurone] =
+                    dataset[picture * nombre_neurones_par_couche + neurone];
+            }
+
+            for (int couche_index = 1; couche_index < nb_couches; couche_index++)
+            {
+                calculer_single_layer_output(
+                    nb_neurones_par_couches[couche_index - 1],
+                    nb_neurones_par_couches[couche_index],
+                    neurones_by_layer_array[couche_index - 1],
+                    neurones_by_layer_array[couche_index],
+                    NULL,
+                    weights[couche_index - 1],
+                    biases[couche_index - 1]);
+            }
+
+            if (backpropagation_to_every_layer(
+                    neurones_by_layer_array,
+                    nb_couches,
+                    nb_neurones_par_couches,
+                    weights,
+                    biases,
+                    predictions_by_categories[picture],
+                    learning_rate) != 0)
+            {
+
+                for (int couche = 0; couche < nb_couches; couche++)
+                    free(neurones_by_layer_array[couche]);
+
+                free(neurones_by_layer_array);
+
+                return -1;
+            }
+        }
+    }
+
+    // Étape 3 : compter les bonnes prédictions après l'entraînement.
+    int nombre_bonnes_predictions = 0;
+    for (int picture = 0; picture < dataset_length; picture++)
+    {
+        for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
+        {
+            neurones_by_layer_array[0][neurone] =
+                dataset[picture * nombre_neurones_par_couche + neurone];
+        }
+
+        for (int couche_index = 1; couche_index < nb_couches; couche_index++)
+        {
+            calculer_single_layer_output(
+                nb_neurones_par_couches[couche_index - 1],
+                nb_neurones_par_couches[couche_index],
+                neurones_by_layer_array[couche_index - 1],
+                neurones_by_layer_array[couche_index],
+                NULL,
+                weights[couche_index - 1],
+                biases[couche_index - 1]);
+        }
+
+        if (find_strongest_category_by_neurone_score(neurones_by_layer_array[nb_couches - 1], output_length) == predictions_by_categories[picture])
+        {
+            nombre_bonnes_predictions++;
+        }
+    }
+
+    // Étape 4 : libérer la mémoire.
+
+    for (int couche = 0; couche < nb_couches; couche++)
+        free(neurones_by_layer_array[couche]);
+
+    free(neurones_by_layer_array);
+
+    return nombre_bonnes_predictions;
+}
+
 int pmc_predire(
     double *single_picture_in_X,
     int nb_couches,
@@ -397,148 +540,6 @@ erreur:
     free(erreurs_by_layer);
 
     return -1;
-}
-
-/* TRAINING PHASE */
-int train_PMC(double *dataset, int dataset_length,
-              int *predictions_by_categories,
-              int nb_couches,
-              int nb_neurones_par_couches[],
-              double **weights,
-              double **biases,
-              int epochs,
-              double learning_rate)
-{
-    if (dataset == NULL ||
-        predictions_by_categories == NULL ||
-        nb_neurones_par_couches == NULL ||
-        weights == NULL ||
-        biases == NULL ||
-        dataset_length <= 0 ||
-        nb_couches < 2 ||
-        epochs <= 0 ||
-        !isfinite(learning_rate) ||
-        learning_rate <= 0.0)
-    {
-        return -1;
-    }
-
-    for (int couche = 0; couche < nb_couches; couche++)
-    {
-        if (nb_neurones_par_couches[couche] <= 0)
-            return -1;
-    }
-
-    for (int couche = 0; couche < nb_couches - 1; couche++)
-    {
-        if (weights[couche] == NULL || biases[couche] == NULL)
-            return -1;
-    }
-
-    int output_length = nb_neurones_par_couches[nb_couches - 1];
-
-    for (int picture = 0; picture < dataset_length; picture++)
-    {
-        if (predictions_by_categories[picture] < 0 ||
-            predictions_by_categories[picture] >= output_length)
-        {
-            return -1;
-        }
-    }
-
-    // Étape 1 : allouer les neurones de chaque couche.
-    double **neurones_by_layer_array = malloc(nb_couches * sizeof(double *));
-
-    if (neurones_by_layer_array == NULL)
-        return -1;
-
-    if (init_couches_cachees_by_layer(nb_couches, nb_neurones_par_couches, neurones_by_layer_array) != 0)
-    {
-        free(neurones_by_layer_array);
-        return -1;
-    }
-
-    int nombre_neurones_par_couche = nb_neurones_par_couches[0];
-
-    // Étape 2 : entraînement.
-    for (int epoch = 0; epoch < epochs; epoch++)
-    {
-        for (int picture = 0; picture < dataset_length; picture++)
-        {
-            for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
-            {
-                neurones_by_layer_array[0][neurone] =
-                    dataset[picture * nombre_neurones_par_couche + neurone];
-            }
-
-            for (int couche_index = 1; couche_index < nb_couches; couche_index++)
-            {
-                calculer_single_layer_output(
-                    nb_neurones_par_couches[couche_index - 1],
-                    nb_neurones_par_couches[couche_index],
-                    neurones_by_layer_array[couche_index - 1],
-                    neurones_by_layer_array[couche_index],
-                    NULL,
-                    weights[couche_index - 1],
-                    biases[couche_index - 1]);
-            }
-
-            if (backpropagation_to_every_layer(
-                    neurones_by_layer_array,
-                    nb_couches,
-                    nb_neurones_par_couches,
-                    weights,
-                    biases,
-                    predictions_by_categories[picture],
-                    learning_rate) != 0)
-            {
-
-                for (int couche = 0; couche < nb_couches; couche++)
-                    free(neurones_by_layer_array[couche]);
-
-                free(neurones_by_layer_array);
-
-                return -1;
-            }
-        }
-    }
-
-    // Étape 3 : compter les bonnes prédictions après l'entraînement.
-    int nombre_bonnes_predictions = 0;
-    for (int picture = 0; picture < dataset_length; picture++)
-    {
-        for (int neurone = 0; neurone < nombre_neurones_par_couche; neurone++)
-        {
-            neurones_by_layer_array[0][neurone] =
-                dataset[picture * nombre_neurones_par_couche + neurone];
-        }
-
-        for (int couche_index = 1; couche_index < nb_couches; couche_index++)
-        {
-            calculer_single_layer_output(
-                nb_neurones_par_couches[couche_index - 1],
-                nb_neurones_par_couches[couche_index],
-                neurones_by_layer_array[couche_index - 1],
-                neurones_by_layer_array[couche_index],
-                NULL,
-                weights[couche_index - 1],
-                biases[couche_index - 1]);
-        }
-
-        if (find_strongest_category_by_neurone_score(neurones_by_layer_array[nb_couches - 1], output_length) == predictions_by_categories[picture])
-        {
-            nombre_bonnes_predictions++;
-        }
-    }
-
-    // Étape 4 : libérer la mémoire.
-
-    for (int couche = 0; couche < nb_couches; couche++)
-        free(neurones_by_layer_array[couche]);
-
-    free(neurones_by_layer_array);
-
-    return nombre_bonnes_predictions;
 }
 
 int train_pmc_dataset(

@@ -46,13 +46,23 @@ int entrainer_perceptron_transforme_dataset(double *dataset, int *Y, int dataset
     return erreurs;
 }
 
+// cette fonction ne prédit pas une droite. 
+// elle prédit la classe à laquelle appartient un point
+// mais où est la frontière de décision dans tout ça?
+// La frontière de décision correspond à tous les points pour lesquels :
+// somme : w_1x_1 + w_2x_2 + b = 0
+// Concrètement :
+// - D'un côté de la droite, la fonction renvoie 1.
+// - De l'autre côté, elle renvoie 0.
+// - Sur la droite, elle renvoie 1 puisque tu utilises somme >= 0.
+
 int predict_perceptron(double *vecteur, int vector_length, double *weights, double biais){
     double somme = biais;
 
     for (int i = 0; i < vector_length; i++){
         somme += vecteur[i] * weights[i];
     }
-    return somme >= 0 ? 1 : 0;
+    return somme >= 0 ? 1 : -1;
 }
 
 int predict_xor(double *X, int dataset_length, int vector_length, double *weights, double bias, int *predictions) {
