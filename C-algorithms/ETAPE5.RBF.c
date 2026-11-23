@@ -5,29 +5,40 @@
 #include "utils.h"
 
 // ETAPE 1 : Initialiser les centroïdes de façon aléatoire.
-void find_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions])
-{
-    // K est le nombre de centroïdes que l'on souhaite obtenir.
-    // On tire les points SANS REMISE (mélange de Fisher-Yates) : si le même point était choisi deux fois,
-    // deux centroïdes seraient identiques, l'un resterait vide et update_centroids() diviserait par 0 (NaN).
-    int *indices = malloc(dataset_rows * sizeof(int));
-    for (int i = 0; i < dataset_rows; i++)
-    {
-        indices[i] = i;
+void find_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions]){
+    int seen[dataset_rows];
+    
+    for (int i = 0; i < dataset_rows; i++){
+        seen[i] = -1; // Au départ, aucune ligne n'a été choisie.
     }
-    for (int i = 0; i < K; i++)
-    {
-        int r = i + rand() % (dataset_rows - i); // Le nombre aléatoire sert à choisir quel point du dataset devient le centre initial.
-        int tmp = indices[i];
-        indices[i] = indices[r];
-        indices[r] = tmp;
-        int random_centroid = indices[i];
+
+    for (int i = 0; i < K; i++){
+        // On choisit une ligne au hasard dans le dataset.
+
+        int random_centroid;
+        int is_already_selected;
+        
+        do {
+            random_centroid = rand() % dataset_rows;
+            is_already_selected = 0;
+            for (int a = 0; a < i ; a++) {
+                if (seen[a] == random_centroid){
+                    is_already_selected = 1;
+                    break;
+                }
+            }
+        } while (is_already_selected == 1);
+
+        seen[i] = random_centroid;
+        // On copie ses coordonnées dans le tableau des centroïdes.
         for (int j = 0; j < vector_dimensions; j++){
             centroids_array[i][j] = dataset_array[random_centroid][j];
         }
     }
-    free(indices);
 }
+
+
+
 
 // ETAPE 2 : Assigner les points du dataset au centroïde le plus proche en calculant la distance euclidienne de chaque point à chacun des centroïdes.
 void assign_clusters(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K])
