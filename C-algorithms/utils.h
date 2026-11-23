@@ -14,7 +14,7 @@ double *dot, int K, int dataset_columns,
 double centroids_array[K][dataset_columns]
 );
 
-double rbf_distance(double distance, double sigma);
+double noyau_rbf(double distance, double sigma);
 
 double calculer_dot_output(int K, double rbf_closeness[K], double weights[K]);
 

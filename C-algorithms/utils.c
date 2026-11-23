@@ -34,15 +34,17 @@ return closest_centroid;
 
 // rbf_distance renvoie une valeur de proximité, pas une valeur géométrique
 // Plus la distance est petite, plus la valeur de rbf_distance() est grande.
-double rbf_distance(double distance_to_centroid, double sigma){
-    return exp(-(distance_to_centroid * distance_to_centroid)/ (2.0 * sigma * sigma));
+double noyau_rbf(double distance_carre, double gamma){
+// L'exponentielle de 30 et l'exponentielle de 10 sont deux nombres très grands, 
+// mais \(e^{30}\) est énormément plus grand que \(e^{10}\).
+// Rappel : \(e \approx 2{,}718\).
+    return exp(distance_carre * -gamma);
 }
 
 // multiplie chaque valeur de proximité du point au centroide par un poids, puis additionne tous les résultats.
 // Les poids indiquent l'importance que le réseau accorde à chaque valeur de proximité pour calculer sa prédiction.
 
 // calculer_dot_outpu() peut retourner 9000, 500, -3000, 0.5, etc.
-
 double calculer_rbf_dot_output(int K, double dot_proximity_to_centroids[K], double weights[K]){
     double dot_output = 0.0;
     for (int i = 0; i < K; i++){

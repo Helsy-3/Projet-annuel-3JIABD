@@ -75,49 +75,29 @@ void update_centroids(int K, int dataset_rows, int vector_dimensions, double dat
     }
 }
 
-
-/* ETAPE 4 : Calculer Gamma.
-   On calcule la distance moyenne entre chaque centroïde
-   et son voisin le plus proche.
-   Puis on convertit cette distance en Gamma :
-   gamma = 1 / (2 * sigma * sigma).
+/* ETAPE 2 : Calculer Gamma.
+   On calcule la distance moyenne entre chaque centroïde et son voisin le plus proche.
+   Puis on convertit cette distance en Gamma : gamma = 1 / (2 * sigma * sigma).
 */
-
-double calculer_gamma(
-    int K,
-    int vector_dimensions,
-    double centroids_array[K][vector_dimensions])
-{
+double calculer_gamma(int K, int vector_dimensions, double centroids_array[K][vector_dimensions]){
+    
     // Il faut au moins deux centroïdes.
     if (K < 2)
         return -1.0;
-
     double distances_sum = 0.0;
 
-    for (int current_centroid = 0;
-         current_centroid < K;
-         current_centroid++)
-    {
+    for (int current_centroid = 0; current_centroid < K; current_centroid++){
         double min_neighbor_distance = INFINITY;
 
-        for (int other_centroid = 0;
-             other_centroid < K;
-             other_centroid++)
-        {
+        for (int other_centroid = 0; other_centroid < K; other_centroid++){
             if (other_centroid == current_centroid)
                 continue;
 
             double distance_carre = 0.0;
 
             // Calcul de la distance euclidienne au carré.
-            for (int dimension = 0;
-                 dimension < vector_dimensions;
-                 dimension++)
-            {
-                double difference =
-                    centroids_array[current_centroid][dimension]
-                    - centroids_array[other_centroid][dimension];
-
+            for (int dimension = 0; dimension < vector_dimensions; dimension++){
+                double difference = centroids_array[current_centroid][dimension] - centroids_array[other_centroid][dimension];
                 distance_carre += difference * difference;
             }
 
@@ -144,16 +124,8 @@ double calculer_gamma(
     return gamma;
 }
 
-/* ETAPE 5 : Calculer la proximité d'un point
-   par rapport à chaque centroïde avec RBF.
-*/
-void compute_dot_proximity_to_centroids(
-    int vector_dimensions,
-    double dot[vector_dimensions],
-    int K,
-    double centroids_array[K][vector_dimensions],
-    double gamma,
-    double dot_proximity_to_centroids[K]){
+/* ETAPE 3 : Calculer la proximité d'un point par rapport à chaque centroïde avec RBF. */
+void compute_dot_proximity_to_centroids(int vector_dimensions, double dot[vector_dimensions], int K, double centroids_array[K][vector_dimensions], double gamma, double dot_proximity_to_centroids[K]){
     for (int centroid = 0; centroid < K; centroid++){
         double distance_carre = 0.0;
 
@@ -163,13 +135,22 @@ void compute_dot_proximity_to_centroids(
         }
 
         // Application de la fonction gaussienne du cours.
-        dot_proximity_to_centroids[centroid] =
-            exp(-gamma * distance_carre);
+        // gamma modifie la manière dont la distance influence le score de proximité.
+        // si gamma est faible, le point est noté comme proche du centre malgré la distance.
+        // si gamma est élevé, la proximité chute rapidement dès que le point s'éloigne du centroïde.
+
+        dot_proximity_to_centroids[centroid] = noyau_rbf(distance_carre, gamma);
+        // le score est compris entre 0 et 1.
+        // Score	Signification
+        // 1	    Le point est exactement au centre du centroïde.
+        // 0,8	    Le point est très proche du centroïde.
+        // 0,5	    Le point est à une distance intermédiaire.
+        // 0,1	    Le point est assez éloigné.
     }
 }
 
 
-/* ETAPE 6 : Entrainer les poids rétro-activement */
+/* ETAPE 4 : Entrainer les poids rétro-activement */
 void recursive_train_weights(int K, int dataset_length, int vector_dimensions, double dataset_array[dataset_length][vector_dimensions], double target_predictions[dataset_length], double centroids_array[K][vector_dimensions], double gamma, double weights[K], double learning_rate,int epochs){
     double dot_proximity_to_centroids[K];
 
@@ -193,13 +174,10 @@ void recursive_train_weights(int K, int dataset_length, int vector_dimensions, d
             );
 
             double error = output - target_predictions[i];
-
             total_error += error * error;
 
             for (int centroid = 0; centroid < K; centroid++){
-                weights[centroid] -=
-                    learning_rate * 2.0 * error
-                    * dot_proximity_to_centroids[centroid];
+                weights[centroid] -= learning_rate * 2.0 * error * dot_proximity_to_centroids[centroid];
             }
         }
 
