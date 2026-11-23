@@ -4,7 +4,9 @@
 #include <math.h>
 #include "utils.h"
 
-// ETAPE 1 : Initialiser les centroïdes de façon aléatoire.
+// ETAPE 1 : Centroides + Clusters
+
+// trouver les centroïdes
 void find_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions]){
     int seen[dataset_rows];
     
@@ -38,45 +40,37 @@ void find_centroids(int K, int dataset_rows, int vector_dimensions, double datas
 }
 
 
-
-
-// ETAPE 2 : Assigner les points du dataset au centroïde le plus proche en calculant la distance euclidienne de chaque point à chacun des centroïdes.
-void assign_clusters(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K])
-{
-    for (int i = 0; i < K; i++)
-    {
+// Assigner les points du dataset au centroïde le plus proche en calculant la distance euclidienne de chaque point à chacun des centroïdes.
+void assign_clusters(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], double centroids_array[K][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K]){
+    for (int i = 0; i < K; i++){
         cluster_sizes[i] = 0;
     }
-    for (int i = 0; i < dataset_rows; i++)
-    {
-        int closest_centroid_index = calculer_closest_centroid(dataset_array[i], K, vector_dimensions, centroids_array);
+    for (int i = 0; i < dataset_rows; i++){
+        int closest_centroid_index = find_closest_centroid(dataset_array[i], K, vector_dimensions, centroids_array);
         int dot_cluster_index = cluster_sizes[closest_centroid_index]; // On regarde combien de points sont déjà dans ce cluster
         clusters_array[closest_centroid_index][dot_cluster_index] = i; // On ajoute le point au cluster
         cluster_sizes[closest_centroid_index]++;                       // Le cluster contient maintenant un point de plus
     }
 }
 
-// ETAPE 3 : Pour chaque cluster, la moyenne de tous les points devient le nouveau centroïde.
-void update_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][vector_dimensions])
-{
-    for (int cluster_index = 0; cluster_index < K; cluster_index++)
-    { // Pour chaque cluster
-        if (cluster_sizes[cluster_index] == 0)
+// Pour chaque cluster, la moyenne de tous les points devient le nouveau centroïde.
+void update_centroids(int K, int dataset_rows, int vector_dimensions, double dataset_array[dataset_rows][vector_dimensions], int clusters_array[K][dataset_rows], int cluster_sizes[K], double centroids_array[K][vector_dimensions]){
+    for (int cluster = 0; cluster < K; cluster++){ 
+        if (cluster_sizes[cluster] == 0)
             continue; // Cluster vide : on garde l'ancien centroïde (sinon 0/0 = NaN)
 
-        for (int dimension = 0; dimension < vector_dimensions; dimension++)
-        { // Pour chaque dimension d'un point
-            double sum = 0.0;
-            // Parcourir tous les points du cluster
-            for (int dot_index = 0; dot_index < cluster_sizes[cluster_index]; dot_index++)
-            {                                                                     // Récupérer l'indice du point dans le dataset
-                int dot_index_dataset = clusters_array[cluster_index][dot_index]; // Ajouter la coordonnée du point pour cette dimension
+        for (int dimension = 0; dimension < vector_dimensions; dimension++){ 
+            double dimension_sum = 0.0;
+
+            // Parcourir tous les points du cluster pour cette dimension
+            for (int dot_index = 0; dot_index < cluster_sizes[cluster]; dot_index++){
+                int dot_index_dataset = clusters_array[cluster][dot_index]; // Ajouter la coordonnée du point pour cette dimension
                 double dot_dimension = dataset_array[dot_index_dataset][dimension];
-                sum += dot_dimension;
+                dimension_sum += dot_dimension;
             }
 
-            double mean = sum / cluster_sizes[cluster_index]; // Calculer la moyenne de cette dimension
-            centroids_array[cluster_index][dimension] = mean; // Mettre à jour la coordonnée du centroïde
+            double dimension_moyenne = dimension_sum / cluster_sizes[cluster]; // Calculer la moyenne de cette dimension
+            centroids_array[cluster][dimension] = dimension_moyenne; // Mettre à jour la coordonnée du centroïde
         }
     }
 }

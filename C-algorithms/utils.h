@@ -9,7 +9,7 @@ double *centroid,
 int dataset_columns
 );
 
-int calculer_closest_centroid(
+int find_closest_centroid(
 double *dot, int K, int dataset_columns,
 double centroids_array[K][dataset_columns]
 );
